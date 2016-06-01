@@ -1,0 +1,129 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/example_main_layout"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.wepay.android.example.MainActivity" >
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_blue_bg"
+        android:orientation="vertical" >
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+		    
+            <ImageButton
+                android:id="@+id/buttonInfo"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="0dip"
+    			android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+        		android:src="@drawable/card_reader_info" />
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+		    
+            <ImageButton
+                android:id="@+id/buttonTokenize"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="0dip"
+    			android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+        		android:src="@drawable/card_reader_tokenize" />
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+		    
+            <ImageButton
+                android:id="@+id/buttonStopCardReader"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="0dip"
+    			android:background="@drawable/rounded_transparent_bg"
+                android:scaleType="fitCenter"
+                android:src="@drawable/card_reader_stop" />
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+		    
+            <ImageButton
+                android:id="@+id/buttonManual"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="0dip"
+    			android:background="@drawable/rounded_transparent_bg"
+                android:scaleType="fitCenter"
+                android:src="@drawable/manual" />
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+		    
+            <ImageButton
+                android:id="@+id/buttonSignature"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="0dip"
+    			android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+                android:src="@drawable/signature" />
+            
+            <View
+		        android:layout_width="0dp"
+		        android:layout_height="1dp"
+		        android:layout_weight="1" >
+		    </View>
+            
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/statusView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:text="Choose a payment method"
+            android:gravity="center"
+            android:background="@drawable/rounded_transparent_bg"
+        	android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    </LinearLayout>
+    
+    <TextView
+        android:id="@+id/consoleView"
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dip"
+        android:typeface="monospace"
+        android:text="Console Logs :"
+        android:background="@drawable/rounded_green_bg"
+       	android:autoLink="web"
+       	android:layout_weight="1.0"/>
+
+</LinearLayout>
