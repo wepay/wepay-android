@@ -1,0 +1,55 @@
+<html>
+	<head>
+		<style type="text/css">
+			.select-container {
+				float: right;
+			}
+			#muchSelect {
+				font-size: 16px;
+				width: 160px;
+			}
+			#suchIframe {
+				border: none;
+				height: 100%;
+				width: 100%;
+			}
+		</style>
+
+		<script type="text/javascript">
+			var versionsObj = {
+				"1.0.0": "1.0.0/index.html",
+			},
+			currentVersion = "1.0.0";
+
+			function updateSelection(key) {
+				updateIframeSrc(key);
+			}
+
+			function updateIframeSrc(key) {
+				document.getElementById('suchIframe').src = versionsObj[key];
+
+			}
+		</script>
+	</head>
+	<body>
+		<div class="select-container">
+			Select SDK version:&nbsp;
+			<select id="muchSelect" onchange="updateSelection(this.value)"></select>
+		</div>
+		<iframe id="suchIframe" src=""></iframe>
+		<script type="text/javascript">
+			var domSelect = document.getElementById('muchSelect'),
+				versionsArray = Object.keys(versionsObj);
+
+			Object.keys(versionsObj).forEach(function(element, index) {
+				var domOption = document.createElement('option');
+				domOption.value = element;
+				domOption.innerHTML = element;
+				domSelect.appendChild(domOption);
+			})
+			domSelect.selectedIndex = versionsArray.indexOf(currentVersion);
+
+			updateIframeSrc(currentVersion);
+		</script>
+	</body>
+</html>
