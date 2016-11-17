@@ -1,6 +1,3 @@
-/*
- * 
- */
 package com.wepay.android.enums;
 
 /**
@@ -65,7 +62,13 @@ public enum ErrorCode {
     TRANSACTION_INFO_NOT_PROVIDED(10031),
 
     /** The payment method cannot be tokenized error. */
-    PAYMENT_METHOD_CANNOT_BE_TOKENIZED(10032);
+    PAYMENT_METHOD_CANNOT_BE_TOKENIZED(10032),
+
+    /** The failed to get battery info error. */
+    FAILED_TO_GET_BATTERY_LEVEL(10033),
+
+    /** The card reader not connected error. */
+    CARD_READER_NOT_CONNECTED_ERROR(10034);
 
     /** The code. */
     private final int code;
@@ -131,6 +134,10 @@ public enum ErrorCode {
                 return "TRANSACTION_INFO_NOT_PROVIDED";
             case 10032:
                 return "PAYMENT_METHOD_CANNOT_BE_TOKENIZED";
+            case 10033:
+                return "FAILED_TO_GET_BATTERY_LEVEL";
+            case 10034:
+                return "CARD_READER_NOT_CONNECTED_ERROR";
         default:
             return "UNDEFINED_ERROR";
         }

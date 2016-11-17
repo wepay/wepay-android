@@ -1,3 +1,21 @@
+2016-11-16
+* Released version 2.0.0
+* CardReaderTransactionInfoCallback.useTransactionInfo() and AuthorizationInfo.getAuthorizedAmount() now use BigDecimal instead of double for amount
+* CardReaderTransactionInfoCallback.useTransactionInfo() will now throw an error if the amount has more than 2 digits after the decimal point
+* Changed default card reader timeout from 30 seconds to 60 seconds
+* Card reader will not timeout when waiting for card if Config.setRestartTransactionAfterOtherErrors() is set to true
+* Added APIs for fetching card reader battery levels
+* Added APIs for calibrating card readers on new Android device models
+* Implemented card reader mocking for use during development and testing
+* Added integration and unit tests
+* Separated card reader lifecycle from restarting transactions:
+	* Added Config.setStopCardReaderAfterTransaction() to control if the card reader stops or stays on after a transaction
+	* Replaced Config.setRestartCardReaderAfterSuccess() with setRestartTransactionAfterSuccess()
+	* Replaced Config.setRestartCardReaderAfterGeneralError() with setRestartTransactionAfterGeneralError()
+	* Replaced Config.setRestartCardReaderAfterOtherErrors() with setRestartTransactionAfterOtherErrors()
+	* Renamed WePay.startCardReaderForReading() to startTransactionForReading()
+	* Renamed WePay.startCardReaderForTokenizing() to startTransactionForTokenizing() 
+
 2016-05-31
 * Released version 1.0.0
 * SDK frameworks files are available in /WePayExample/app/libs

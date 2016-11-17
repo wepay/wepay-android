@@ -1,8 +1,10 @@
 package com.wepay.android.models;
 
+import java.math.BigDecimal;
+
 public class AuthorizationInfo {
 
-    private double authorizedAmount;
+    private BigDecimal authorizedAmount;
     private String transactionToken;
     private String tokenId;
 
@@ -12,7 +14,7 @@ public class AuthorizationInfo {
      * @param transactionToken the transaction token
      * @param tokenId the token id
      */
-    public AuthorizationInfo(double authorizedAmount, String transactionToken, String tokenId) {
+    public AuthorizationInfo(BigDecimal authorizedAmount, String transactionToken, String tokenId) {
         this.authorizedAmount = authorizedAmount;
         this.transactionToken = transactionToken;
         this.tokenId = tokenId;
@@ -23,7 +25,7 @@ public class AuthorizationInfo {
      *
      * @return the authorized amount
      */
-    public double getAuthorizedAmount() {
+    public BigDecimal getAuthorizedAmount() {
         return authorizedAmount;
     }
 

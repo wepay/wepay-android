@@ -1,6 +1,3 @@
-/*
- * 
- */
 package com.wepay.android;
 
 import com.wepay.android.models.Error;

@@ -25,6 +25,7 @@ import com.wepay.android.models.PaymentInfo;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -54,7 +55,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
 
 
     private long accountId;
-    private double amount;
+    BigDecimal amount;
     private String currencyCode;
 
     /** The config. */
@@ -101,7 +102,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.delegate = rp350xManager;
     }
 
-    public void performEMVTransactionStartCommand(double amount, String currencyCode, long accountId, DeviceManager roamDeviceManager,  ExternalCardReaderHelper externalCardReaderHelper) {
+    public void performEMVTransactionStartCommand(BigDecimal amount, String currencyCode, long accountId, DeviceManager roamDeviceManager,  ExternalCardReaderHelper externalCardReaderHelper) {
         this.amount = amount;
         this.currencyCode = currencyCode;
         this.accountId = accountId;
@@ -307,9 +308,22 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             switch (cmd) {
                 case EMVStartTransaction:
                     if (responseType == ResponseType.MAGNETIC_CARD_DATA) {
-                        this.deviceManagerDelegate.handleSwipeResponse(data, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, this.isFallbackSwipe);
-                        Error swipeError = this.deviceManagerDelegate.validateSwiperInfoForTokenization(data);
-                        this.reactToError(swipeError, PaymentMethod.SWIPE);
+                        this.deviceManagerDelegate.handleSwipeResponse(data, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, this.isFallbackSwipe, new DeviceManagerDelegate.TransactionResponseHandler() {
+                            @Override
+                            public void onSuccess(JSONObject response) {
+                                reactToError(null, PaymentMethod.SWIPE);
+                            }
+
+                            @Override
+                            public void onFailure(Error error) {
+                                reactToError(error, PaymentMethod.SWIPE);
+                            }
+
+                            @Override
+                            public void onFinish() {
+                                reactToError(null, PaymentMethod.SWIPE);
+                            }
+                        });
 
                     } else if (responseType == ResponseType.LIST_OF_AIDS) {
                         this.performApplicationSelection((List<ApplicationIdentifier>) data.get(Parameter.ListOfApplicationIdentifiers));
@@ -398,7 +412,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.applicationCryptogram = (String) data.get(Parameter.ApplicationCryptogram);
 
 
-        this.deviceManagerDelegate.handlePaymentInfo(paymentInfo, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, false, new DeviceManagerDelegate.AuthResponseHandler() {
+        this.deviceManagerDelegate.handlePaymentInfo(paymentInfo, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, false, new DeviceManagerDelegate.TransactionResponseHandler() {
             @Override
             public void onSuccess(JSONObject response) {
                 String tempAuthCode = response.isNull("authorisation_code") ? null : response.optString("authorisation_code");
@@ -438,6 +452,12 @@ public class DipTransactionHelper implements DeviceResponseHandler {
                 authorizationError = error;
                 consumeAuthenticationData(null, null, null);
             }
+
+            @Override
+            public void onFinish() {
+                authorizationError = null;
+                reactToError(null);
+            }
         });
     }
 
@@ -462,7 +482,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         }
     }
 
-    private AuthorizationInfo createAuthInfo(String tc) {
+    AuthorizationInfo createAuthInfo(String tc) {
         String text = tc + "+" + this.creditCardId;
         byte[] data = null;
         try {
@@ -480,16 +500,19 @@ public class DipTransactionHelper implements DeviceResponseHandler {
     }
 
     private void reactToError(final Error error, final PaymentMethod paymentMethod) {
-        // stop (end) transaction, then either restart transaction or stop reader
+        // stop (end) transaction, then either restart transaction, stop reader, or mark transaction as completed
         this.postStopRunnable = new Runnable() {
             @Override
             public void run() {
-                if (delegate.shouldKeepWaitingForCard(error, paymentMethod)) {
+                if (delegate.shouldRestartTransaction(error, paymentMethod)) {
                     // restart transaction
                     startTransaction();
-                } else {
+                } else if (delegate.shouldStopCardReaderAfterTransaction()){
                     // stop reader
                     delegate.stopDevice();
+                } else {
+                    // mark transaction completed, but leave reader running
+                    delegate.transactionCompleted();
                 }
             }
         };
@@ -497,7 +520,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.executeCommand(Command.EMVTransactionStop, this);
     }
 
-    private Boolean shouldReactToError(Error error) {
+    Boolean shouldReactToError(Error error) {
         if (error != null &&
                 error.getErrorCode() == com.wepay.android.enums.ErrorCode.EMV_TRANSACTION_ERROR.getCode() &&
                 error.getMessage().equalsIgnoreCase(ErrorCode.CardReaderNotConnected.toString())) {
@@ -509,7 +532,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         return true;
     }
 
-    private Error validateEMVResponse(Map<Parameter, Object> data) {
+    Error validateEMVResponse(Map<Parameter, Object> data) {
         Error error = null;
         ResponseCode responseCode = (ResponseCode) data.get(Parameter.ResponseCode);
         if (responseCode == ResponseCode.Error) {
@@ -618,12 +641,21 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         }
     }
 
-    private boolean shouldExecuteMagicNumbers() {
-        double[] magicNumbers = new double[]{ 21.61, 121.61, 22.61, 122.61, 24.61, 124.61, 25.61, 125.61 };
+    boolean shouldExecuteMagicNumbers() {
+        BigDecimal[] magicNumbers = new BigDecimal[]{
+                new BigDecimal( "21.61"),
+                new BigDecimal("121.61"),
+                new BigDecimal( "22.61"),
+                new BigDecimal("122.61"),
+                new BigDecimal( "24.61"),
+                new BigDecimal("124.61"),
+                new BigDecimal( "25.61"),
+                new BigDecimal("125.61")
+        };
         boolean isMagicSuccessAmount = false;
 
         for (int i=0; i < magicNumbers.length; i++) {
-            if (this.amount == magicNumbers[i]) {
+            if (this.amount != null && this.amount.compareTo(magicNumbers[i]) == 0) {
                 isMagicSuccessAmount = true;
                 break;
             }
@@ -654,12 +686,12 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         }
     }
 
-    private String convertToEMVAmount(double amount){
-        int intAmount = (int) (amount * 100);
+    String convertToEMVAmount(BigDecimal amount){
+        int intAmount = amount.scaleByPowerOfTen(2).intValue();
         return String.format("%012d", intAmount);
     }
 
-    private String convertToEmvCurrencyCode(String currencyCode) {
+    String convertToEmvCurrencyCode(String currencyCode) {
         String emvCurrencyCode = null;
 
         if (currencyCode.equals("USD")) {
@@ -669,7 +701,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         return emvCurrencyCode;
     }
 
-    private String convertResponseCodeToHexString(String responseCode) {
+    String convertResponseCodeToHexString(String responseCode) {
         char[] chars = responseCode.toCharArray();
         StringBuffer hex = new StringBuffer();
         for (int i = 0; i < chars.length; i++)

@@ -5,9 +5,11 @@ package com.wepay.android.models;
 
 import android.location.Address;
 
+import com.google.gson.Gson;
 import com.wepay.android.enums.PaymentMethod;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * The Class PaymentInfo represents all the information obtained via a particular payment method.
@@ -233,34 +235,31 @@ public class PaymentInfo {
      * @see java.lang.Object#toString()
      */
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("firstName:" 			+ this.firstName 			+ "\n");
-        sb.append("lastName:" 			+ this.lastName 			+ "\n");
-        sb.append("email:" 				+ this.email 				+ "\n");
-        sb.append("paymentDescription:" + this.paymentDescription 	+ "\n");
-        sb.append("paymentMethod:" 		+ this.paymentMethod 		+ "\n");
-        sb.append("billingAddress:" 	+ this.addressToString(this.billingAddress) + "\n");
-        sb.append("shippingAddress:" 	+ this.addressToString(this.shippingAddress) + "\n");
-        sb.append("}");
+        // LinkedHashMap is used for constructing JSON string with fields in fixed order
+        LinkedHashMap<String, Object> paymentInfoMap = new LinkedHashMap<>();
+        paymentInfoMap.put("firstName", this.firstName);
+        paymentInfoMap.put("lastName", this.lastName);
+        paymentInfoMap.put("email", this.email);
+        paymentInfoMap.put("paymentDescription", this.paymentDescription);
+        paymentInfoMap.put("paymentMethod", this.paymentMethod.toString());
+        paymentInfoMap.put("billingAddress", this.addressToLinkedHashMap(this.billingAddress));
+        paymentInfoMap.put("shippingAddress", this.addressToLinkedHashMap(this.shippingAddress));
 
-        return sb.toString();
+        return new Gson().toJson(paymentInfoMap, LinkedHashMap.class);
     }
 
-    private String addressToString(Address address) {
+    LinkedHashMap<String, Object> addressToLinkedHashMap(Address address) {
         if (address == null) {
-            return "{}";
+            return new LinkedHashMap<>();
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("\taddressLine1:" 	+ address.getAddressLine(0) 		+ "\n");
-        sb.append("\taddressLine2:" 	+ address.getAddressLine(1) 		+ "\n");
-        sb.append("\tlocality    :" 	+ address.getLocality()	 			+ "\n");
-        sb.append("\tpostalCode  :" 	+ address.getPostalCode() 			+ "\n");
-        sb.append("\tcountryCode :" 	+ address.getCountryCode() 			+ "\n");
-        sb.append("}");
+        LinkedHashMap<String, Object> addressMap = new LinkedHashMap<>();
+        addressMap.put("addressLine1", address.getAddressLine(0));
+        addressMap.put("addressLine2", address.getAddressLine(1));
+        addressMap.put("locality", address.getLocality());
+        addressMap.put("postalCode", address.getPostalCode());
+        addressMap.put("countryCode", address.getCountryCode());
 
-        return sb.toString();
+        return addressMap;
     }
 }

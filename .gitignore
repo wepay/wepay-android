@@ -37,7 +37,10 @@ proguard/
 documentation/html/
 documentation/latex/
 documentation/rtf/
+
+# wepay internal tools
 /wepay-android-tools/
+/wepay-android-cardreader-binaries/
 
 # Card reader libs are git-ignored by default.
 **/libs/internal/**

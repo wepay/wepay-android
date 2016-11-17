@@ -3,6 +3,10 @@
  */
 package com.wepay.android.models;
 
+import com.google.gson.Gson;
+
+import java.util.LinkedHashMap;
+
 /**
  * The Class PaymentToken represents payment information that was obtained from the user and is stored on WePay servers. This token can be used to complete the payment transaction via WePay's web APIs.
  */
@@ -33,12 +37,10 @@ public class PaymentToken {
      * @see java.lang.Object#toString()
      */
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("tokenId:" + this.tokenId + "\n");
-        sb.append("}");
+        LinkedHashMap<String, Object> paymentTokenMap = new LinkedHashMap<>();
+        paymentTokenMap.put("tokenId", this.tokenId);
 
-        return sb.toString();
+        return new Gson().toJson(paymentTokenMap, LinkedHashMap.class);
     }
 
 }

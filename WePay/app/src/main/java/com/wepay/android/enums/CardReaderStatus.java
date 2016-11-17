@@ -1,10 +1,7 @@
-/*
- * 
- */
 package com.wepay.android.enums;
 
 /**
- * The Enum CardReaderStatus defines all the statuses that can be returned by the swiper.
+ * The Enum CardReaderStatus defines all the statuses that can be returned by the card reader.
  */
 public enum CardReaderStatus {
 
@@ -54,20 +51,20 @@ public enum CardReaderStatus {
     private final int code;
 
     /** \internal
-     * Instantiates a new swiper status.
+     * Instantiates a new card reader status.
      *
-     * @param code the code representing the card reader status
+     * @param code the code representing the card reader status.
      */
     CardReaderStatus(int code)  {
         this.code = code;
     }
 
     /** \internal
-     * Gets the code representing the swiper status.
+     * Gets the code representing the card reader status.
      *
      * @return the code
      */
-    public int getSwiperStatusCode() {
+    public int getCardReaderStatusCode() {
         return code;
     }
 

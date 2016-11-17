@@ -92,7 +92,7 @@ public class WePay {
      *
      * @param cardReaderHandler the card reader handler
      */
-    public void startCardReaderForReading(CardReaderHandler cardReaderHandler) {
+    public void startTransactionForReading(CardReaderHandler cardReaderHandler) {
         if (this.isCardReaderAvailable) {
             this.cardReaderHelper.startCardReaderForReading(cardReaderHandler);
         } else {
@@ -120,7 +120,7 @@ public class WePay {
      * @param tokenizationHandler the tokenization handler
      * @param authorizationHandler the authorization handler
      */
-    public void startCardReaderForTokenizing(CardReaderHandler cardReaderHandler, TokenizationHandler tokenizationHandler, AuthorizationHandler authorizationHandler) {
+    public void startTransactionForTokenizing(CardReaderHandler cardReaderHandler, TokenizationHandler tokenizationHandler, AuthorizationHandler authorizationHandler) {
         if (this.isCardReaderAvailable) {
             String sessionId = (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
             this.cardReaderHelper.startCardReaderForTokenizing(cardReaderHandler, tokenizationHandler, authorizationHandler, sessionId);
@@ -142,6 +142,32 @@ public class WePay {
     }
 
     /**
+     * Use this method to try calibrating a charged card reader that doesn't seem to work on a device. If successful, we will store the calibration parameters on the device, and use them to connect to the card reader in future transactions. This operation only needs to be performed once during first-time setup, and only if the card reader is not automatically detected on a device.
+     *
+     * @param calibrationHandler the calibration handler
+     */
+    public void calibrateCardReader(CalibrationHandler calibrationHandler) {
+        if (this.isCardReaderAvailable) {
+            this.cardReaderHelper.calibrateCardReader(calibrationHandler);
+        } else {
+            Log.e("wepay_sdk", "card reader functionality is not available");
+        }
+    }
+
+    /**
+     * Use this method to get the current battery level of the card reader.
+     *
+     * @param batteryLevelHandler the battery level handler
+     */
+    public void getCardReaderBatteryLevel(BatteryLevelHandler batteryLevelHandler) {
+        if (this.isCardReaderAvailable) {
+            this.cardReaderHelper.getCardReaderBatteryLevel(batteryLevelHandler);
+        } else {
+            Log.e("wepay_sdk", "card reader functionality is not available");
+        }
+    }
+
+    /**
      * Use this method to tokenize any PaymentInfo object, such as one representing credit card info obtained manually.
      * The payment info will be tokenized by WePay's servers, and the token will be returned via the TokenizationHandler interface.
      *
@@ -154,7 +180,7 @@ public class WePay {
         if (paymentInfo.getPaymentMethod() == PaymentMethod.MANUAL) {
             Map<String, Object> paramMap = getManualParamMap(paymentInfo, sessionId);
 
-            WepayClient.post(this.config, "credit_card/create", paramMap, new JsonHttpResponseHandler() {
+            WepayClient.creditCardCreate(this.config, paramMap, new JsonHttpResponseHandler() {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
 

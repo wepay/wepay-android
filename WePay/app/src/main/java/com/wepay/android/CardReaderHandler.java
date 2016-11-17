@@ -1,12 +1,11 @@
-/*
- * 
- */
 package com.wepay.android;
 
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
 import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
+
+import java.math.BigDecimal;
 
 /** \interface CardReaderHandler
  * The Interface CardReaderHandler defines the methods used to communicate information regarding the card reader.
@@ -77,16 +76,16 @@ public interface CardReaderHandler {
 
         /**
          * The callback function that must be executed when onTransactionInfoRequested() is called by the SDK.
-         * Note: In the staging environment, use amounts of 20.61, 120.61, 23.61 and 123.61 to simulate authorization errors. Amounts of 21.61, 121.61, 22.61 and 122.61 will simulate successful auth.
+         * Note: In the staging environment, use amounts of 20.61, 120.61, 23.61 and 123.61 to simulate authorization errors. Amounts of 21.61, 121.61, 22.61, 122.61, 24.61, 124.61, 25.61 and 125.61 will simulate successful auth.
          * <p>
          * Example:
-         * callback.useTransactionInfo(21.61, CurrencyCode.USD, 1234567);
+         * callback.useTransactionInfo(new BigDecimal("21.61"), CurrencyCode.USD, 1234567);
          *
-         * @param amount       the amount for the transaction. It will be rounded to the nearest two decimal places.
+         * @param amount       the amount for the transaction. For USD amounts, there can be a maximum of two places after the decimal point.
          * @param currencyCode the currency code for the transaction. e.g. CurrencyCode.USD.
          * @param accountId    the WePay account id of the merchant.
          */
-        public void useTransactionInfo(double amount, CurrencyCode currencyCode, long accountId);
+        public void useTransactionInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId);
     }
 
     /** \interface CardReaderEmailCallback

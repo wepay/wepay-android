@@ -16,13 +16,14 @@ import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
 import com.wepay.android.enums.ErrorCode;
 import com.wepay.android.enums.PaymentMethod;
-import com.wepay.android.internal.CardReader.DeviceHelpers.ConfiguredDevices;
 import com.wepay.android.internal.CardReader.DeviceHelpers.DipConfigHelper;
 import com.wepay.android.internal.CardReader.DeviceHelpers.DipTransactionHelper;
 import com.wepay.android.internal.CardReader.DeviceHelpers.ExternalCardReaderHelper;
+import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -70,16 +71,16 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
 
     private String currentDeviceSerialNumber;
 
-    /** The swiper charge up timer. */
+    /** The reader charge up timer. */
     private Handler readerChargeUpHandler = new Handler();
 
-    /** The swiper inform not connected timer. */
+    /** The reader inform not connected timer. */
     private Handler readerInformNotConnectedHandler = new Handler();
 
-    /** The swiper charge up runnable. */
+    /** The reader charge up runnable. */
     private Runnable readerChargeUpRunnable = null;
 
-    /** The swiper inform not connected runnable. */
+    /** The reader inform not connected runnable. */
     private Runnable readerInformNotConnectedRunnable = null;
 
 
@@ -92,7 +93,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         this.dipConfighelper = new DipConfigHelper(config);
         this.dipTransactionHelper = new DipTransactionHelper(config, this, managerDelegate, this.dipConfighelper);
 
-        configuredDeviceHashes = ConfiguredDevices.get(config.getContext());
+        configuredDeviceHashes = SharedPreferencesHelper.getConfiguredDevices(config.getContext());
         Log.d("wepay_sdk", "configuredDeviceHashes: " + configuredDeviceHashes);
     }
 
@@ -104,18 +105,17 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         this.checkAndWaitForEMVCard();
     }
 
-
     @Override
     public void startDevice() {
         this.startWaitingForReader();
+
+        // devices are only started for transactions, so we should wait for card
+        this.readerShouldWaitForCard = true;
     }
 
     @Override
     public void stopDevice() {
-        this.readerShouldWaitForCard = false;
-
-        // stop waiting for card and cancel all pending notifications
-        this.stopWaitingForCard();
+        this.transactionCompleted();
 
         // inform external
         externalCardReaderHelper.informExternalCardReader(CardReaderStatus.STOPPED);
@@ -124,25 +124,41 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
             roamDeviceManager.release();
             roamDeviceManager = null;
         }
+
+        // inform the delegate that we've stopped.
+        this.deviceManagerDelegate.onCardReaderStopped();
     }
 
     @Override
-    public boolean shouldKeepWaitingForCard(Error error, PaymentMethod paymentMethod) {
+    public void transactionCompleted() {
+        this.readerShouldWaitForCard = false;
+
+        // stop waiting for card and cancel all pending notifications
+        this.stopWaitingForCard();
+    }
+
+    @Override
+    public boolean shouldRestartTransaction(Error error, PaymentMethod paymentMethod) {
         if (error != null) {
             // if the error code was a general error
             if (error.getErrorDomain().equals(Error.ERROR_DOMAIN_SDK) && error.getErrorCode().equals(ErrorCode.CARD_READER_GENERAL_ERROR.getCode())) {
                 // return whether or not we're configured to restart on general error
-                return this.config.shouldRestartCardReaderAfterGeneralError();
+                return this.config.shouldRestartTransactionAfterGeneralError();
             }
             // return whether or not we're configured to restart on other errors
-            return this.config.shouldRestartCardReaderAfterOtherErrors();
+            return this.config.shouldRestartTransactionAfterOtherErrors();
         } else if (paymentMethod.equals(PaymentMethod.SWIPE)) {
             // return whether or not we're configured to restart on successful swipe
-            return this.config.shouldRestartCardReaderAfterSuccess();
+            return this.config.shouldRestartTransactionAfterSuccess();
         } else {
-            // dont restart on successful dip
+            // don't restart on successful dip
             return false;
         }
+    }
+
+    @Override
+    public boolean shouldStopCardReaderAfterTransaction() {
+        return this.config.shouldStopCardReaderAfterTransaction();
     }
 
     private String getCurrentDeviceConfigHash() {
@@ -178,7 +194,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                             if (shouldReset) {
                                 resetDevice();
                             } else {
-                                setExpectedDOLs();
+                                setUserInterfaceOptions();
                             }
                         }
                     });
@@ -201,7 +217,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
             this.readerInformNotConnectedHandler.removeCallbacks(this.readerInformNotConnectedRunnable);
         }
 
-        // Wait a few seconds for the swiper to be detected, otherwise announce not connected
+        // Wait a few seconds for the reader to be detected, otherwise announce not connected
         this.readerInformNotConnectedRunnable = new Runnable() {
             @Override
             public void run() {
@@ -235,7 +251,9 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         }
 
         // stop transaction if running
-        this.roamDeviceManager.getTransactionManager().cancelLastCommand();
+        if (this.roamDeviceManager != null) {
+            this.roamDeviceManager.getTransactionManager().cancelLastCommand();
+        }
     }
 
     private void fetchAuthInfoForTransaction() {
@@ -243,7 +261,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         this.externalCardReaderHelper.informExternalCardReaderAmountCallback(new CardReaderHandler.CardReaderTransactionInfoCallback() {
 
             @Override
-            public void useTransactionInfo(double amount, CurrencyCode currencyCode, long accountId) {
+            public void useTransactionInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId) {
                 Log.d("wepay_sdk", String.format("got amount:%.2f, currency:%s, accountId:%d", amount, currencyCode.toString(), accountId));
 
                 // validate params
@@ -259,11 +277,11 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         });
     }
 
-    private Error validateAuthInfo(double amount, CurrencyCode currencyCode, long accountId) {
+    private Error validateAuthInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId) {
 
         final CurrencyCode[] allowedCurrencyCodes = new CurrencyCode[] {CurrencyCode.USD};
 
-        if (((int) (amount*100)) < 99) {
+        if (amount == null || new BigDecimal("0.99").compareTo(amount) > 0 || amount.scale() > 2) {
             return Error.getInvalidTransactionInfoError();
         } else if (!Arrays.asList(allowedCurrencyCodes).contains(currencyCode)) {
             return Error.getInvalidTransactionInfoError();
@@ -313,7 +331,8 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                                 dipConfighelper.getResponseDOLList(), handler);
                         break;
                     case ConfigureUserInterfaceOptions:
-                        roamDeviceManager.getConfigurationManager().setUserInterfaceOptions(30, LanguageCode.ENGLISH, new Byte((byte) 0x00), new Byte((byte) 0x00), handler);
+                        roamDeviceManager.getConfigurationManager().setUserInterfaceOptions(
+                                deviceManagerDelegate.getCardReaderTimeout(), LanguageCode.ENGLISH, new Byte((byte) 0x00), new Byte((byte) 0x00), handler);
                     default:
                         break;
 
@@ -353,8 +372,12 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                     readerIsConnected = true;
 
                     if (readerShouldWaitForCard) {
+                        // inform external and start waiting for card
                         externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
                         checkAndWaitForEMVCard();
+                    } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
+                        // inform external
+                        externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
                     }
 
                     break;
@@ -380,7 +403,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                     this.executeCommand(Command.ConfigureResponseDOLData, this);
                     break;
                 case ConfigureResponseDOLData:
-                    this.executeCommand(Command.ConfigureUserInterfaceOptions, this);
+                    this.setUserInterfaceOptions();
                     break;
                 case ConfigureUserInterfaceOptions:
                     this.setExpectedDOLs();
@@ -390,6 +413,10 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                     break;
             }
         }
+    }
+
+    private void setUserInterfaceOptions() {
+        this.executeCommand(Command.ConfigureUserInterfaceOptions, this);
     }
 
     private void setExpectedDOLs() {
@@ -413,7 +440,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         try {
             String configuredDeviceHash = this.dipConfighelper.generateDeviceConfigHash(currentDeviceSerialNumber);
             configuredDeviceHashes.add(configuredDeviceHash);
-            ConfiguredDevices.put(config.getContext(), configuredDeviceHashes);
+            SharedPreferencesHelper.saveConfiguredDevices(config.getContext(), configuredDeviceHashes);
         } catch (Exception e) {
             // Just logging as this failure shouldn't stop the emv flow
             // At worst we will be configuring the reader again next time
@@ -432,7 +459,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         Log.d("wepay_sdk", "device connected");
         if (!this.readerIsConnected) {
             this.executeCommand(Command.ReadCapabilities, this);
-            // cancel previous timer if it exists
+            // cancel timer if it exists
             if (this.readerInformNotConnectedHandler != null) {
                 this.readerInformNotConnectedHandler.removeCallbacks(this.readerInformNotConnectedRunnable);
             }
@@ -443,10 +470,13 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     public void cardReaderDisconnected() {
         Log.d("wepay_sdk", "device disconnected");
 
-        // Inform external delegate if we should wait for card, and the reader was previously connected
         if (this.readerShouldWaitForCard && this.readerIsConnected) {
+            // inform external and stop waiting for card
             this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
             this.stopWaitingForCard();
+        } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
+            // inform external
+            externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
         }
 
         this.readerIsConnected = false;
@@ -464,7 +494,6 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
             this.stopDevice();
         }
     }
-
 }
 
 

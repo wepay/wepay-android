@@ -3,11 +3,13 @@
  */
 package com.wepay.android.models;
 
+import com.google.gson.Gson;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.enums.ErrorCode;
 
 import org.json.JSONObject;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -146,16 +148,14 @@ public class Error extends Exception {
      * @see java.lang.Object#toString()
      */
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("errorDomain:" 		+ this.errorDomain			+ "\n");
-        sb.append("errorCategory:" 		+ this.errorCategory 		+ "\n");
-        sb.append("errorCode:" 			+ this.errorCode 			+ "\n");
-        sb.append("errorDescription:" 	+ this.errorDescription 	+ "\n");
-        sb.append("innerException:" 	+ this.innerException 		+ "\n");
-        sb.append("}");
+        LinkedHashMap<String, Object> errorMap = new LinkedHashMap<>();
+        errorMap.put("errorDomain", this.errorDomain);
+        errorMap.put("errorCategory", this.errorCategory);
+        errorMap.put("errorCode", this.errorCode);
+        errorMap.put("errorDescription", this.errorDescription);
+        errorMap.put("innerException", this.innerException);
 
-        return sb.toString();
+        return new Gson().toJson(errorMap, LinkedHashMap.class);
     }
 
     /** \internal
@@ -302,6 +302,25 @@ public class Error extends Exception {
     }
 
     /** \internal
+     * Instantiates failed to get battery level error.
+     *
+     * @return the failed to get battery level error
+     */
+
+    public static Error getFailedToGetBatteryLevelError() {
+        return new Error(ErrorCode.FAILED_TO_GET_BATTERY_LEVEL.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "Battery level could not be determined.");
+    }
+
+    /** \internal
+     * Instantiates a card reader not connected error.
+     *
+     * @return the card reader not connected error
+     */
+    public static Error getCardReaderNotConnectedError() {
+        return new Error(ErrorCode.CARD_READER_NOT_CONNECTED_ERROR.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "Card reader is not connected.");
+    }
+
+    /** \internal
      * Instantiates a card reader general error.
      *
      * @return the card reader general error
@@ -364,5 +383,28 @@ public class Error extends Exception {
 
     public static Error getCardReaderGeneralErrorWithMessage(String errorDescription) {
         return new Error(ErrorCode.CARD_READER_GENERAL_ERROR.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, errorDescription);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = hash * 31 + errorCode;
+        hash = hash * 31 + (errorCategory == null ? 0 : errorCategory.hashCode());
+        hash = hash * 31 + (errorDescription == null ? 0 : errorDescription.hashCode());
+        hash = hash * 31 + (errorDomain == null ? 0 : errorDomain.hashCode());
+        hash = hash * 31 + (innerException == null ? 0 : innerException.hashCode());
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if ((o == null) || (this.getClass() != o.getClass())) {
+            return false;
+        }
+        Error e = (Error) o;
+        return e.toString().equals(this.toString());
     }
 }

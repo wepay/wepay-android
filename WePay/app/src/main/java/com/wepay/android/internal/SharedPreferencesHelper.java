@@ -1,4 +1,4 @@
-package com.wepay.android.internal.CardReader.DeviceHelpers;
+package com.wepay.android.internal;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -8,12 +8,13 @@ import android.text.TextUtils;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ConfiguredDevices {
+public class SharedPreferencesHelper {
 
     private final static String PREF_KEY_CONFIGURED_DEVICE_SIZE = "PREF_KEY_CONFIGURED_DEVICE_SIZE";
     private final static String PREF_KEY_DEVICE_CONFIG_HASH = "PREF_KEY_DEVICE_CONFIG_HASH_";
+    private final static String PREF_KEY_DEVICE_CALIBRATION = "PREF_KEY_DEVICE_CALIBRATION";
 
-    public static Set<String> get(Context context) {
+    public static Set<String> getConfiguredDevices(Context context) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         Set<String> deviceConfigHashes = new HashSet<String>();
         int size = sp.getInt(PREF_KEY_CONFIGURED_DEVICE_SIZE, 0);
@@ -27,7 +28,7 @@ public class ConfiguredDevices {
         return deviceConfigHashes;
     }
 
-    public static boolean put(Context context, Set<String> deviceConfigHash) {
+    public static boolean saveConfiguredDevices(Context context, Set<String> deviceConfigHash) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putInt(PREF_KEY_CONFIGURED_DEVICE_SIZE, deviceConfigHash.size());
@@ -40,12 +41,32 @@ public class ConfiguredDevices {
         return editor.commit();
     }
 
-    private static boolean clear(Context context) {
+    public static boolean clearConfiguredDevices(Context context) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = sp.edit();
         editor.remove(PREF_KEY_CONFIGURED_DEVICE_SIZE);
         editor.remove(PREF_KEY_DEVICE_CONFIG_HASH);
         return editor.commit();
     }
+
+    public static String getCalibration(Context context) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        return sp.getString(PREF_KEY_DEVICE_CALIBRATION, null);
+    }
+
+    public static boolean saveCalibration(Context context, String calibrationJSON) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(PREF_KEY_DEVICE_CALIBRATION, calibrationJSON);
+        return editor.commit();
+    }
+
+    public static boolean clearCalibration(Context context) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.remove(PREF_KEY_DEVICE_CALIBRATION);
+        return editor.commit();
+    }
+
 
 }

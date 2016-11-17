@@ -80,7 +80,7 @@ public class CheckoutHelper {
             Map<String, Object> paramMap = getSignatureParamMap(encodedImage, checkoutId);
 
             // make the client call
-            WepayClient.post(this.config, "checkout/signature/create", paramMap, new JsonHttpResponseHandler() {
+            WepayClient.checkoutSignatureCreate(this.config, paramMap, new JsonHttpResponseHandler() {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                     // extract signature url

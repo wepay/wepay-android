@@ -34,7 +34,7 @@ Replace [version] in following steps with the sdk version you are using
     2. wepay-android-1.0.0-javadoc.jar
     3. wepay-android-1.0.0-sources.jar
 
-+ Open build.gradle file for you app module (not the build.gradle file of the project) and add the following
++ Open build.gradle file for your app module (not the build.gradle file of the project) and add the following
 ~~~{.java}
 repositories{
     flatDir{
@@ -62,7 +62,7 @@ compile 'com.google.code.gson:gson:2.2.2'
 <uses-permission android:name="android.permission.INTERNET" />
 ~~~
 
-+ Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions fromt the user. See the WePayExample app's MainActivity.java for a sample implementation.
++ Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions from the user. See the WePayExample app's MainActivity.java for a sample implementation.
 
 + Clean and build the project using your IDE or from the command line by going to the project's base directory and running:
 ~~~{.java}
@@ -225,7 +225,7 @@ public void onReaderResetRequested(CardReaderResetCallback callback) {
 @Override
 public void onTransactionInfoRequested(CardReaderTransactionInfoCallback callback) {
     // provide the amount, currency code and WePay account ID of the merchant
-    callback.useTransactionInfo(21.61, CurrencyCode.USD, accountId);
+    callback.useTransactionInfo(new BigDecimal("21.61"), CurrencyCode.USD, accountId);
 }
 
 @Override
@@ -317,14 +317,14 @@ PaymentInfo paymentInfo = new PaymentInfo("Android", "Tester", "a@b.com",
 ~~~{.java}
 this.wepay.tokenize(paymentInfo, this);
 ~~~
-+ Thats it! The following sequence of events will occur:
++ That's it! The following sequence of events will occur:
     1. The SDK will send the obtained payment info to WePay's servers for tokenization
     2. If the tokenization succeeds, TokenizationHandler's `onSuccess` method will be called
     3. Otherwise, if the tokenization fails, TokenizationHandler's `onError` method will be called with the appropriate error
 
 ### Integrating the Store Signature API
 
-+ Implement the CheckoutHandler interfaces
++ Implement the CheckoutHandler interface
 ~~~{.java}
 public class MainActivity extends ActionBarActivity implements CheckoutHandler
 ~~~
@@ -353,8 +353,115 @@ Bitmap signature = BitmapFactory.decodeResource(getApplicationContext().getResou
 ~~~{.java}
 this.wepay.storeSignatureImage(signature, checkoutId, this);
 ~~~
-+ Thats it! The following sequence of events will occur:
++ That's it! The following sequence of events will occur:
     1. The SDK will send the obtained signature to WePay's servers for tokenization
     2. If the operation succeeds, CheckoutHandler's `onSuccess` method will be called
     3. Otherwise, if the operation fails, CheckoutHandler's `onError` method will be called with the appropriate error
+
+### Integrating the Calibration API
+
+Sometimes, the card reader will not work with Android devices that we have not seen before. It is possible to calibrate the card reader to these new devices so that it starts working. The calibration only needs to be performed once, and only if the card reader is not detected on first use. After successful calibration, the reader can be used on the user's device as usual.
+
++ Implement the CalibrationHandler interface
+~~~{.java}
+public class MainActivity extends ActionBarActivity implements CalibrationHandler
+~~~
++ Implement the CalibrationHandler interface methods
+~~~{.java}
+@Override
+public void onProgress(final double progress) {
+    // show progress
+}
+
+
+@Override
+public void onComplete(final CalibrationResult result, final CalibrationParameters params) {
+    // show result to the user
+    // send the calibration params to WePay
+}
+~~~
++ Make the WePay API call, passing in the instance of the class that implemented the CalibrationHandler interface methods
+~~~{.java}
+this.wepay.calibrateCardReader(this);
+~~~
++ That's it! The following sequence of events will occur:
+    1. The SDK will attempt to calibrate the reader
+    2. CalibrationHandler's `onProgress` method will be called periodically to indicate the current progress
+    3. When the process is completed, CalibrationHandler's `onComplete` method will be called with the result
+    4. The card reader must be plugged in before attempting calibration, otherwise the process will fail
+
+Note: If calibration succeeds, you must obtain the calibration parameters and email them to mobile@wepay.com. We will bake these parameters into the SDK, so that future users with the same devices will not have to run the calibration process.
+
+### Integrating the Battery Level API
+
++ Implement the BatteryLevelHandler interface
+~~~{.java}
+public class MainActivity extends ActionBarActivity implements BatteryLevelHandler
+~~~
++ Implement the BatteryLevelHandler interface methods
+~~~{.java}
+@Override
+public void onBatteryLevel(int batteryLevel) {
+    // show result to the user
+}
+
+@Override
+public void onBatteryLevelError(Error error) {
+    // handle the error
+}
+~~~
++ Make the WePay API call, passing in the instance of the class that implemented the BatteryLevelHandler interface methods
+~~~{.java}
+this.wepay.getCardReaderBatteryLevel(this);
+~~~
++ That's it! The following sequence of events will occur:
+    1. The SDK will attempt to read the battery level of the card reader
+    2. If the operation succeeds, BatteryLevelHandler's `onBatteryLevel` method will be called with the result
+    3. Otherwise, if the operation fails, BatteryLevelHandler's `onBatteryLevelError` method will be called with the appropriate error
+    4. The card reader must be plugged in before attempting to get battery level, otherwise the process will fail
+
+### Test/develop using mock card reader and mock WepayClient
+
++ To use mock card reader implementation instead of using the real reader, instantiate a MockConfig object and pass it to Config:
+~~~{.java}
+MockConfig mockConfig = new MockConfig().setUseMockCardReader(true);
+config.setMockConfig(mockConfig);
+~~~
++ To use mock WepayClient implementation instead of interacting with the real WePay server, set the corresponding option on the mockConfig object:
+~~~{.java}
+mockConfig.setUseMockWepayClient(true);
+~~~
++ Other options are also available:
+~~~{.java}
+mockConfig.setMockPaymentMethod(PaymentMethod.SWIPE) // Payment method to mock; Defaults to SWIPE.
+.setCardReadTimeout(true) // To mock a card reader timeout; Defaults to false.
+.setCardReadFailure(true) // To mock a failure for card reading; Defaults to false.
+.setCardTokenizationFailure(true) // To mock a failure for card tokenization; Defaults to false.
+.setEMVAuthFailure(true) // To mock a failure for EMV authorization; Defaults to false.
+.setMultipleEMVApplication(true) // To mock multiple EMV applications on card to choose from; Defaults to false.
+.setBatteryLevelError(true); // To mock an error while fetching battery level; Defaults to false.
+~~~
+
+### Integration tests and unit tests
+All the integration tests and unit tests are located in the `src/androidTest/java/` directory. The tests are instrumented tests so be sure to have a connected running physical device or emulator before running the tests. 
+
+##### From Android Studio
+
++ To run a single test, right-click the test method and select "Run".
++ To run all test methods in a class, right-click the class and select "Run".
++ To run all tests in a directory, right-click the directory and select "Run tests".
+
+##### From the command line
+
+Change to this project's directory and call the connectedAndroidTest (or cAT) task:
+~~~
+./gradlew cAT
+~~~
+
++ HTML test result files can be found at: `<path_to_your_project>/app/build/reports/androidTests/connected/` directory.
++ XML test result files: `<path_to_your_project>/app/build/outputs/androidTest-results/connected/` directory.
+
+
+
+
 

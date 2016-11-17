@@ -24,26 +24,34 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.wepay.android.AuthorizationHandler;
+import com.wepay.android.BatteryLevelHandler;
+import com.wepay.android.CalibrationHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.CheckoutHandler;
 import com.wepay.android.TokenizationHandler;
 import com.wepay.android.WePay;
+import com.wepay.android.enums.CalibrationResult;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.models.AuthorizationInfo;
+import com.wepay.android.models.CalibrationParameters;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Locale;
 
 /**
  * The Class MainActivity.
  */
-public class MainActivity extends ActionBarActivity implements CardReaderHandler, TokenizationHandler, AuthorizationHandler, CheckoutHandler, OnClickListener {
+public class MainActivity extends ActionBarActivity implements CardReaderHandler, TokenizationHandler, AuthorizationHandler, CheckoutHandler, CalibrationHandler, BatteryLevelHandler, OnClickListener {
 
     TextView tvStatus, tvConsole;
 
@@ -61,7 +69,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
 
     long accountId;
 
-    double amount = 22.61; // magic success amount
+    BigDecimal amount = new BigDecimal("22.61"); // magic success amount
 
     public static final String TAG = "wepay_sdk";
 
@@ -89,7 +97,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         // Fetch settings
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         this.clientId = preferences.getString("client_id_text", getString(R.string.pref_default_client_id_name));
-        this.environment = preferences.getString("api_endpoint_text", getString(R.string.pref_default_api_endpoint_name));
+        this.environment = preferences.getString("api_endpoint_text", Config.ENVIRONMENT_STAGE);
         this.accountId = Long.valueOf(preferences.getString("account_id_text", getString(R.string.pref_default_account_id_name)));
 
 		Log.d(TAG, clientId);
@@ -101,7 +109,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole("accountId: " + String.format("%d", accountId));
 
         // Initialize and configure the wepay object with current settings
-        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true);
+        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true).setStopCardReaderAfterTransaction(false);
         this.wepay = new WePay(config);
     }
 
@@ -134,8 +142,11 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         ((ImageButton) findViewById(R.id.buttonManual)).setOnClickListener(this);
         ((ImageButton) findViewById(R.id.buttonInfo)).setOnClickListener(this);
         ((ImageButton) findViewById(R.id.buttonTokenize)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonSignature)).setOnClickListener(this);
         ((ImageButton) findViewById(R.id.buttonStopCardReader)).setOnClickListener(this);
+        ((ImageButton) findViewById(R.id.buttonCalibrate)).setOnClickListener(this);
+        ((ImageButton) findViewById(R.id.buttonBattery)).setOnClickListener(this);
+        ((ImageButton) findViewById(R.id.buttonSignature)).setOnClickListener(this);
+
     }
 
     /**
@@ -291,6 +302,51 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.setStatusText("Signature succeeded");
     }
 
+    /**
+     * CalibrationHandler - onProgress
+     */
+    @Override
+    public void onProgress(final double progress) {
+        writeToConsole("calibration progress: " + String.format("%.2f", progress * 100));
+    }
+
+    /**
+     * CalibrationHandler - onComplete
+     */
+    @Override
+    public void onComplete(final CalibrationResult result, final CalibrationParameters params) {
+        writeToConsole("\nCalibration Result: " + result.toString());
+
+        if (params != null) {
+            try {
+                JSONObject res = new JSONObject(params.toString());
+                writeToConsole("Calibration json:\n" + res.toString());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        this.setStatusText("Calibration Result: " + result.toString());
+    }
+
+    /**
+     * BatteryLevelHandler - onBatteryLevel
+     */
+    @Override
+    public void onBatteryLevel(int batteryLevel) {
+        writeToConsole("\nBattery Level: " + batteryLevel);
+        this.setStatusText("Battery Level: " + batteryLevel);
+    }
+
+    /**
+     * BatteryLevelHandler - onBatteryLevelError
+     */
+    @Override
+    public void onBatteryLevelError(Error error) {
+        this.writeToConsole("\nGetting Battery Level failed! error:");
+        this.writeToConsole(error.toString());
+        this.setStatusText("Getting Battery Level failed!");
+    }
 
     /**
      * On click handler for UI buttons.
@@ -303,12 +359,12 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.resetConsole();
             this.writeToConsole("Initializing Card Reader for Tokenizing");
             this.setStatusText("Initializing Card Reader");
-            this.wepay.startCardReaderForTokenizing(this, this, this);
+            this.wepay.startTransactionForTokenizing(this, this, this);
         } else if (btn.getId() == R.id.buttonInfo) {
             this.resetConsole();
             this.writeToConsole("Initializing Card Reader for Info");
             this.setStatusText("Initializing Card Reader");
-            this.wepay.startCardReaderForReading(this);
+            this.wepay.startTransactionForReading(this);
         } else if (btn.getId() == R.id.buttonManual) {
             this.resetConsole();
 
@@ -343,6 +399,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             String checkoutId = "12345678";
             this.wepay.storeSignatureImage(signature, checkoutId, this);
         } else if (btn.getId() == R.id.buttonStopCardReader) {
+            this.resetConsole();
             // Print message to screen
             this.writeToConsole("Stop Card Reader selected");
 
@@ -351,6 +408,26 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
 
             // Make WePay API call
             this.wepay.stopCardReader();
+        } else if (btn.getId() == R.id.buttonCalibrate) {
+            this.resetConsole();
+            // Print message to screen
+            this.writeToConsole("Calibrate Card Reader selected");
+
+            // Change status label
+            this.setStatusText("Calibrating Card Reader...");
+
+            // Make WePay API call
+            this.wepay.calibrateCardReader(this);
+        }  else if (btn.getId() == R.id.buttonBattery) {
+            this.resetConsole();
+            // Print message to screen
+            this.writeToConsole("Battery Level selected");
+
+            // Change status label
+            this.setStatusText("Getting Battery Level...");
+
+            // Make WePay API call
+            this.wepay.getCardReaderBatteryLevel(this);
         }
     }
 

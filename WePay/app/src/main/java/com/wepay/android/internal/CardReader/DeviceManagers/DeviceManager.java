@@ -10,8 +10,11 @@ public interface DeviceManager {
     public void startDevice();
     public void stopDevice();
     public void processCard();
-    public boolean shouldKeepWaitingForCard(Error error, PaymentMethod paymentMethod);
+    public boolean shouldRestartTransaction(Error error, PaymentMethod paymentMethod);
+    public boolean shouldStopCardReaderAfterTransaction();
     public void cardReaderConnected();
     public void cardReaderDisconnected();
     public void cardReaderError(String message);
+    public void transactionCompleted();
+
 }

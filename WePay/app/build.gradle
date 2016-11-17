@@ -3,22 +3,26 @@ group= 'com.wepay.android'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    buildToolsVersion '24.0.2'
     useLibrary 'org.apache.http.legacy'
 
     defaultConfig {
         minSdkVersion 8
         targetSdkVersion 23
         versionCode 1
-        versionName 'v1.0.0'
+        versionName '2.0.0'
         project.archivesBaseName = "wepay-android"
         project.version = android.defaultConfig.versionName
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+        debug {
+            testCoverageEnabled = true
         }
     }
 
@@ -33,6 +37,12 @@ android {
     }
 }
 
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.7.7.201606060606"
+}
+
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
 
@@ -45,7 +55,7 @@ dependencies {
     compile 'com.google.code.gson:gson:2.6.2'
     compile files('libs/android-async-http-1.4.5.jar')
     compile fileTree(dir: 'libs/internal', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
+    androidTestCompile 'com.android.support.test:runner:0.5'
 
     javadocDeps 'com.google.code.gson:gson:2.6.2'
     javadocDeps files('libs/android-async-http-1.4.5.jar')
@@ -82,18 +92,26 @@ artifacts {
 bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
+
+    filesSpec {
+        from '../../WePayExample/app/libs/'
+        into 'com/wepay/android/wepay-android/'+android.defaultConfig.versionName
+    }
+
     pkg {
         repo = 'maven'
         name = 'wepay-android'
+        userOrg = 'wepay'
+        vcsUrl = 'https://github.com/wepay/wepay-android.git'
 
         version {
-            name = 'wepay-android'
-            desc = 'WePay Android SDK'
+            name = android.defaultConfig.versionName
             released  = new Date()
             vcsTag = android.defaultConfig.versionName
         }
 
         licenses = ['Apache-2.0']
     }
-    configurations = ['archives']
 }
+
+

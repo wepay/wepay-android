@@ -4,6 +4,7 @@ import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.models.PaymentInfo;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,7 +13,7 @@ import java.util.Map;
  */
 public class WepayClientHelper {
 
-    public static Map<String, Object> getCreditCardParams(PaymentInfo paymentInfo, String sessionId, String model, double amount, String currencyCode, long accountId, boolean fallback) {
+    public static Map<String, Object> getCreditCardParams(PaymentInfo paymentInfo, String sessionId, String model, BigDecimal amount, String currencyCode, long accountId, boolean fallback) {
         Map<String, Object> paramMap = null;
         Map<Parameter, Object> cardInfo = (Map<Parameter, Object>) paymentInfo.getCardReaderInfo();
 
@@ -27,7 +28,6 @@ public class WepayClientHelper {
         paramMap.put("account_id", accountId);
         paramMap.put("ksn", cardInfo.get(Parameter.KSN));
         paramMap.put("model", model);
-        paramMap.put("account_id", accountId);
 
         paramMap.put("track_1_status", "0");
         paramMap.put("track_2_status", "0");
@@ -57,17 +57,17 @@ public class WepayClientHelper {
         return paramMap;
     }
 
-    private static Map<String, Object> createSwipeSpecificRequestParams(Map<Parameter, Object> map, double amount, String currencyCode,boolean fallback) {
+    static Map<String, Object> createSwipeSpecificRequestParams(Map<Parameter, Object> map, BigDecimal amount, String currencyCode,boolean fallback) {
         HashMap<String, Object> paramMap = new HashMap<>();
 
-        paramMap.put("amount", amount);
+        paramMap.put("amount", amount.doubleValue());
         paramMap.put("currency_code", currencyCode);
         paramMap.put("emv_fallback", fallback);
 
         return paramMap;
     }
 
-    private static Map<String, Object> createDipSpecificRequestParams(Map<Parameter, Object> map) {
+    static Map<String, Object> createDipSpecificRequestParams(Map<Parameter, Object> map) {
         HashMap<String, Object> paramMap = new HashMap<>();
 
         String formatId = (String) map.get(Parameter.FormatID);
@@ -84,7 +84,7 @@ public class WepayClientHelper {
         return paramMap;
     }
 
-    private static Map<String, Object> createEMVTagParams(Map<Parameter, Object> map) {
+    static Map<String, Object> createEMVTagParams(Map<Parameter, Object> map) {
         HashMap<String, Object> emvParamMap = new HashMap<>();
 
         emvParamMap.put("application_interchange_profile", map.get(Parameter.ApplicationInterchangeProfile));

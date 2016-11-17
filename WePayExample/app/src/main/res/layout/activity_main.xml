@@ -30,7 +30,7 @@
                 android:id="@+id/buttonInfo"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:padding="0dip"
+                android:padding="2dip"
     			android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
         		android:src="@drawable/card_reader_info" />
@@ -45,7 +45,7 @@
                 android:id="@+id/buttonTokenize"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:padding="0dip"
+                android:padding="2dip"
     			android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
         		android:src="@drawable/card_reader_tokenize" />
@@ -60,7 +60,7 @@
                 android:id="@+id/buttonStopCardReader"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:padding="0dip"
+                android:padding="2dip"
     			android:background="@drawable/rounded_transparent_bg"
                 android:scaleType="fitCenter"
                 android:src="@drawable/card_reader_stop" />
@@ -75,7 +75,7 @@
                 android:id="@+id/buttonManual"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:padding="0dip"
+                android:padding="2dip"
     			android:background="@drawable/rounded_transparent_bg"
                 android:scaleType="fitCenter"
                 android:src="@drawable/manual" />
@@ -85,22 +85,82 @@
 		        android:layout_height="1dp"
 		        android:layout_weight="1" >
 		    </View>
-		    
+            
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="5dp"
+            android:layout_weight="1" >
+        </View>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" >
+            </View>
+
+            <ImageButton
+                android:id="@+id/buttonCalibrate"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="2dip"
+                android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+                android:src="@drawable/card_reader_calibrate" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" >
+            </View>
+
+            <ImageButton
+                android:id="@+id/buttonBattery"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="2dip"
+                android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+                android:src="@drawable/card_reader_battery" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" >
+            </View>
+
             <ImageButton
                 android:id="@+id/buttonSignature"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:padding="0dip"
-    			android:scaleType="fitXY"
+                android:padding="2dip"
+                android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
                 android:src="@drawable/signature" />
-            
+
             <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
-            
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" >
+            </View>
+
+            <View
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_weight="0" >
+            </View>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" >
+            </View>
+
         </LinearLayout>
 
         <TextView
@@ -108,7 +168,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dip"
-            android:text="Choose a payment method"
+            android:text="Tap any button above"
             android:gravity="center"
             android:background="@drawable/rounded_transparent_bg"
         	android:textAppearance="?android:attr/textAppearanceMedium" />

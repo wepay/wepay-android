@@ -202,7 +202,7 @@ public class DipConfigHelper {
 
     }
 
-    private void setupKeysValuesForTesting() {
+    void setupKeysValuesForTesting() {
         publicKeyList = new ArrayList<PublicKey>();
 
         // MasterCard
@@ -639,7 +639,7 @@ public class DipConfigHelper {
         ));
     }
 
-    private void setupTACsForTesting() {
+    void setupTACsForTesting() {
         tacMap = new HashMap<String, HashMap<String, String>>();
 
         HashMap tempMap = new HashMap<String, String>();
@@ -673,7 +673,7 @@ public class DipConfigHelper {
         tacMap.put(AID_JCB, tempMap);
     }
 
-    private void setupTACsForProduction() {
+    void setupTACsForProduction() {
         tacMap = new HashMap<String, HashMap<String, String>>();
 
         HashMap tempMap = new HashMap<String, String>();
