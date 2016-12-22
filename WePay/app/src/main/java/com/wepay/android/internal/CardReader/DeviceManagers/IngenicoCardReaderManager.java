@@ -5,20 +5,25 @@ import android.util.Log;
 
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
+import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
 import com.roam.roamreaderunifiedapi.constants.Command;
 import com.roam.roamreaderunifiedapi.constants.LanguageCode;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ProgressMessage;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.roam.roamreaderunifiedapi.constants.ResponseType;
+import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
+import com.wepay.android.CalibrationHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
-import com.wepay.android.enums.ErrorCode;
-import com.wepay.android.enums.PaymentMethod;
+import com.wepay.android.internal.CardReader.DeviceHelpers.CalibrationHelper;
+import com.wepay.android.internal.CardReader.DeviceHelpers.IngenicoCardReaderDetector;
 import com.wepay.android.internal.CardReader.DeviceHelpers.DipConfigHelper;
 import com.wepay.android.internal.CardReader.DeviceHelpers.DipTransactionHelper;
 import com.wepay.android.internal.CardReader.DeviceHelpers.ExternalCardReaderHelper;
+import com.wepay.android.internal.CardReader.DeviceHelpers.TransactionDelegate;
+import com.wepay.android.internal.CardReaderDirector.CardReaderRequest;
 import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -30,13 +35,25 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class RP350XManager implements com.wepay.android.internal.CardReader.DeviceManagers.DeviceManager, DeviceResponseHandler {
+public class IngenicoCardReaderManager implements CardReaderManager,
+                                                  DeviceResponseHandler,
+                                                  TransactionDelegate,
+                                                  DeviceStatusHandler,
+        IngenicoCardReaderDetector.CardReaderDetectionDelegate {
 
-    /** The Constant RP350X_CONNECTION_TIME_SEC. */
-    private static final int RP350X_CONNECTION_TIME_SEC = 7;
+    /** The Constant CONNECTION_TIME_SEC. */
+    private static final int CONNECTION_TIME_SEC = 7;
 
-    /** The Constant RP350X_CONNECTION_TIME_MS. */
-    private static final int RP350X_CONNECTION_TIME_MS = RP350X_CONNECTION_TIME_SEC * 1000;
+    /** The Constant CONNECTION_TIME_MS. */
+    private static final int CONNECTION_TIME_MS = CONNECTION_TIME_SEC * 1000;
+
+    private static final int CARD_READER_TIMEOUT_INFINITE_SEC = 0;
+    private static final int CARD_READER_TIMEOUT_DEFAULT_SEC = 60;
+
+    /** Dummy values for reading a card's info */
+    private static final BigDecimal READ_AMOUNT = new BigDecimal("1.00");
+    private static final CurrencyCode READ_CURRENCY = CurrencyCode.USD;
+    private static final int READ_ACCOUNT_ID = 12345;
 
     /** The reader should wait for card. */
     private boolean readerShouldWaitForCard;
@@ -45,16 +62,13 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     private boolean readerIsWaitingForCard;
 
     /** The reader is connected. */
-    private boolean readerIsConnected;
+    private boolean isConnected;
 
     /** The config. */
     private Config config = null;
 
     /** The roam device manager */
     private DeviceManager roamDeviceManager = null;
-
-    /** The device manager delegate **/
-    private DeviceManagerDelegate deviceManagerDelegate = null;
 
     /** The external card reader helper. */
     private ExternalCardReaderHelper externalCardReaderHelper = null;
@@ -64,6 +78,9 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
 
     /** The dip transaction helper. */
     private DipTransactionHelper dipTransactionHelper = null;
+
+    /** The CardReaderRequest type */
+    private CardReaderRequest requestType = null;
 
     private int currPublicKeyIndex = 0;
 
@@ -83,19 +100,38 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     /** The reader inform not connected runnable. */
     private Runnable readerInformNotConnectedRunnable = null;
 
+    private CalibrationHelper calibrationHelper = new CalibrationHelper();
 
-    public RP350XManager(Config config, DeviceManager roamDeviceManager, DeviceManagerDelegate managerDelegate, ExternalCardReaderHelper externalCardReaderHelper) {
+    public static IngenicoCardReaderManager instantiate(Config config,
+                                                        ExternalCardReaderHelper externalCardReaderHelper) {
+        IngenicoCardReaderManager instance;
+
+        IngenicoCardReaderDetector detector = new IngenicoCardReaderDetector();
+        CalibrationParameters params;
+
+        instance = new IngenicoCardReaderManager(config, externalCardReaderHelper);
+        params = instance.calibrationHelper.getCalibrationParams(config);
+
+        detector.findFirstAvailableCardReader(config, params, instance);
+
+        return instance;
+    }
+
+    private IngenicoCardReaderManager(Config config,
+                                      ExternalCardReaderHelper externalCardReaderHelper) {
         this.config = config;
-        this.roamDeviceManager = roamDeviceManager;
-        this.deviceManagerDelegate = managerDelegate;
         this.externalCardReaderHelper = externalCardReaderHelper;
 
         this.dipConfighelper = new DipConfigHelper(config);
-        this.dipTransactionHelper = new DipTransactionHelper(config, this, managerDelegate, this.dipConfighelper);
-
+        this.dipTransactionHelper = new DipTransactionHelper(config,
+                                                             externalCardReaderHelper,
+                                                             this,
+                                                             this.dipConfighelper);
         configuredDeviceHashes = SharedPreferencesHelper.getConfiguredDevices(config.getContext());
         Log.d("wepay_sdk", "configuredDeviceHashes: " + configuredDeviceHashes);
     }
+
+    /** CardReaderManager */
 
     @Override
     public void processCard() {
@@ -106,7 +142,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     }
 
     @Override
-    public void startDevice() {
+    public void startCardReader() {
         this.startWaitingForReader();
 
         // devices are only started for transactions, so we should wait for card
@@ -114,8 +150,8 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     }
 
     @Override
-    public void stopDevice() {
-        this.transactionCompleted();
+    public void stopCardReader() {
+        endTransaction();
 
         // inform external
         externalCardReaderHelper.informExternalCardReader(CardReaderStatus.STOPPED);
@@ -124,40 +160,105 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
             roamDeviceManager.release();
             roamDeviceManager = null;
         }
-
-        // inform the delegate that we've stopped.
-        this.deviceManagerDelegate.onCardReaderStopped();
     }
 
     @Override
-    public void transactionCompleted() {
+    public void calibrateDevice(final CalibrationHandler calibrationHandler) {
+        this.calibrationHelper.calibrateCardReader(calibrationHandler, this.config);
+    }
+
+    @Override
+    public void setCardReaderRequestType(CardReaderRequest cardReaderRequestType) {
+        this.requestType = cardReaderRequestType;
+    }
+
+    @Override public Boolean isConnected() {
+        return this.isConnected && roamDeviceManager != null;
+    }
+
+    /** TransactionDelegate */
+
+    @Override
+    public void onTransactionCompleted() {
+        endTransaction();
+
+        if (this.shouldStopCardReaderAfterTransaction()) {
+            // stop reader
+            this.stopCardReader();
+        }
+    }
+
+    /** DeviceStatusHandler */
+
+    @Override
+    public void onConnected() {
+        Log.d("wepay_sdk", "IngenicoCardReaderManager onConnected");
+
+        if (this.roamDeviceManager != null) {
+            Log.d("wepay_sdk", "roam devicemanager type is " + this.roamDeviceManager.getType().toString());
+            Log.d("wepay_sdk", "is device ready? " + this.roamDeviceManager.isReady());
+        }
+
+        if (this.roamDeviceManager == null) {
+            Log.d("wepay_sdk", "roamDeviceManager was null");
+            this.startCardReader();
+        } else if (!this.isConnected) {
+            Log.d("wepay_sdk", "roam devicemanager type is " + this.roamDeviceManager.getType().toString());
+
+            this.executeCommand(Command.ReadCapabilities, this);
+            // cancel timer if it exists
+            if (this.readerInformNotConnectedHandler != null) {
+                this.readerInformNotConnectedHandler.removeCallbacks(this.readerInformNotConnectedRunnable);
+            }
+        }
+
+        this.isConnected = true;
+    }
+
+    @Override
+    public void onDisconnected() {
+        Log.d("wepay_sdk", "IngenicoCardReaderManager onDisconnected");
+
+        if (this.isConnected) {
+
+            if (this.readerShouldWaitForCard) {
+                // inform external and stop waiting for card
+                this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
+                this.stopWaitingForCard();
+            } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
+                // inform external
+                externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
+            }
+
+            this.isConnected = false;
+        }
+    }
+
+    @Override
+    public void onError(String message) {
+        Log.d("wepay_sdk", "IngenicoCardReaderManager onError: " + message);
+
+        if (this.isConnected) {
+            if (this.readerIsWaitingForCard) {
+                // inform delegate
+                this.externalCardReaderHelper.informExternalCardReaderError(Error.getCardReaderStatusError(message));
+
+                // stop device
+                this.stopCardReader();
+            }
+
+            this.isConnected = false;
+        }
+    }
+
+    private void endTransaction() {
         this.readerShouldWaitForCard = false;
 
         // stop waiting for card and cancel all pending notifications
         this.stopWaitingForCard();
     }
 
-    @Override
-    public boolean shouldRestartTransaction(Error error, PaymentMethod paymentMethod) {
-        if (error != null) {
-            // if the error code was a general error
-            if (error.getErrorDomain().equals(Error.ERROR_DOMAIN_SDK) && error.getErrorCode().equals(ErrorCode.CARD_READER_GENERAL_ERROR.getCode())) {
-                // return whether or not we're configured to restart on general error
-                return this.config.shouldRestartTransactionAfterGeneralError();
-            }
-            // return whether or not we're configured to restart on other errors
-            return this.config.shouldRestartTransactionAfterOtherErrors();
-        } else if (paymentMethod.equals(PaymentMethod.SWIPE)) {
-            // return whether or not we're configured to restart on successful swipe
-            return this.config.shouldRestartTransactionAfterSuccess();
-        } else {
-            // don't restart on successful dip
-            return false;
-        }
-    }
-
-    @Override
-    public boolean shouldStopCardReaderAfterTransaction() {
+    private boolean shouldStopCardReaderAfterTransaction() {
         return this.config.shouldStopCardReaderAfterTransaction();
     }
 
@@ -177,9 +278,8 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
 
 
     private void checkAndWaitForEMVCard() {
-        final DeviceResponseHandler transactionResponseHandler = this;
         Log.d("wepay_sdk", "checkAndWaitForEMVCard");
-        if (this.readerIsConnected) {
+        if (this.isConnected) {
             //report checking reader
             this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CHECKING_READER);
 
@@ -225,7 +325,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
             }
         };
 
-        this.readerInformNotConnectedHandler.postDelayed(this.readerInformNotConnectedRunnable, RP350X_CONNECTION_TIME_MS);
+        this.readerInformNotConnectedHandler.postDelayed(this.readerInformNotConnectedRunnable, CONNECTION_TIME_MS);
     }
 
     private void resetDevice() {
@@ -257,24 +357,32 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
     }
 
     private void fetchAuthInfoForTransaction() {
-        Log.d("wepay_sdk", "fetchAuthInfoForTransaction");
-        this.externalCardReaderHelper.informExternalCardReaderAmountCallback(new CardReaderHandler.CardReaderTransactionInfoCallback() {
+        if (requestType == CardReaderRequest.CARD_READER_FOR_READING) {
+            // If we're just reading, use dummy info.
+            Log.i("wepay_sdk", "Card request is for reading. Using dummy card info.");
+            dipTransactionHelper.performEMVTransactionStartCommand(READ_AMOUNT, READ_CURRENCY.toString(), READ_ACCOUNT_ID, roamDeviceManager, requestType);
+        } else {
+            // Otherwise, we need to get the info according to the client.
+            Log.d("wepay_sdk", "fetchAuthInfoForTransaction");
+            this.externalCardReaderHelper.informExternalCardReaderAmountCallback(new CardReaderHandler.CardReaderTransactionInfoCallback() {
 
-            @Override
-            public void useTransactionInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId) {
-                Log.d("wepay_sdk", String.format("got amount:%.2f, currency:%s, accountId:%d", amount, currencyCode.toString(), accountId));
+                @Override
+                public void useTransactionInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId) {
+                    Log.d("wepay_sdk", String.format("got amount:%.2f, currency:%s, accountId:%d", amount, currencyCode.toString(), accountId));
 
-                // validate params
-                Error error = validateAuthInfo(amount, currencyCode, accountId);
-                if (error != null) {
-                    externalCardReaderHelper.informExternalCardReaderError(error);
-                } else {
-                    // kick-off transaction
-                    readerIsWaitingForCard = true;
-                    dipTransactionHelper.performEMVTransactionStartCommand(amount, currencyCode.toString(), accountId, roamDeviceManager, externalCardReaderHelper);
+                    // validate params
+                    Error error = validateAuthInfo(amount, currencyCode, accountId);
+                    if (error != null) {
+                        externalCardReaderHelper.informExternalCardReaderError(error);
+                    } else {
+                        // kick-off transaction
+                        readerIsWaitingForCard = true;
+
+                        dipTransactionHelper.performEMVTransactionStartCommand(amount, currencyCode.toString(), accountId, roamDeviceManager, requestType);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     private Error validateAuthInfo(BigDecimal amount, CurrencyCode currencyCode, long accountId) {
@@ -282,11 +390,15 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         final CurrencyCode[] allowedCurrencyCodes = new CurrencyCode[] {CurrencyCode.USD};
 
         if (amount == null || new BigDecimal("0.99").compareTo(amount) > 0 || amount.scale() > 2) {
-            return Error.getInvalidTransactionInfoError();
+            // An empty amount was passed, or the amount is less than 1,
+            // or the amount has more than two decimal places.
+            return Error.getInvalidTransactionAmountError();
         } else if (!Arrays.asList(allowedCurrencyCodes).contains(currencyCode)) {
-            return Error.getInvalidTransactionInfoError();
+            // Invalid currency code has been passed.
+            return Error.getInvalidTransactionCurrencyCodeError();
         } else if (accountId <= 0) {
-            return Error.getInvalidTransactionInfoError();
+            // Invalid account ID.
+            return Error.getInvalidTransactionAccountIDError();
         }
 
         // no validation errors
@@ -332,7 +444,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                         break;
                     case ConfigureUserInterfaceOptions:
                         roamDeviceManager.getConfigurationManager().setUserInterfaceOptions(
-                                deviceManagerDelegate.getCardReaderTimeout(), LanguageCode.ENGLISH, new Byte((byte) 0x00), new Byte((byte) 0x00), handler);
+                                getCardReaderTimeout(), LanguageCode.ENGLISH, new Byte((byte) 0x00), new Byte((byte) 0x00), handler);
                     default:
                         break;
 
@@ -351,7 +463,6 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                 Log.d("wepay_sdk", "ignoring progress message: " + message.toString() + " - " + additionalMessage);
                 // nothing to do here
         }
-
     }
 
     @Override
@@ -369,7 +480,7 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
                 case ReadCapabilities:
                     currentDeviceSerialNumber = (String) data
                             .get(Parameter.InterfaceDeviceSerialNumber);
-                    readerIsConnected = true;
+                    isConnected = true;
 
                     if (readerShouldWaitForCard) {
                         // inform external and start waiting for card
@@ -415,6 +526,27 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         }
     }
 
+    /** CardReaderDetectionDelegate */
+
+    @Override
+    public void onCardReaderManagerDetected(DeviceManager roamDeviceManager) {
+        this.roamDeviceManager = roamDeviceManager;
+        this.roamDeviceManager.registerDeviceStatusHandler(this);
+
+        // Manually call onConnected() the first time to get everything going.
+        this.onConnected();
+    }
+
+    @Override
+    public void onCardReaderDetectionTimeout() {
+        Log.d("wepay_sdk", "onCardReaderDetectionTimeout");
+    }
+
+    @Override
+    public void onCardReaderDetectionFailed(String message) {
+        Log.d("wepay_sdk", "device detection failed with message " + message);
+    }
+
     private void setUserInterfaceOptions() {
         this.executeCommand(Command.ConfigureUserInterfaceOptions, this);
     }
@@ -454,46 +586,13 @@ public class RP350XManager implements com.wepay.android.internal.CardReader.Devi
         this.executeCommand(cmd, this);
     }
 
-    @Override
-    public void cardReaderConnected() {
-        Log.d("wepay_sdk", "device connected");
-        if (!this.readerIsConnected) {
-            this.executeCommand(Command.ReadCapabilities, this);
-            // cancel timer if it exists
-            if (this.readerInformNotConnectedHandler != null) {
-                this.readerInformNotConnectedHandler.removeCallbacks(this.readerInformNotConnectedRunnable);
-            }
-        }
-    }
-
-    @Override
-    public void cardReaderDisconnected() {
-        Log.d("wepay_sdk", "device disconnected");
-
-        if (this.readerShouldWaitForCard && this.readerIsConnected) {
-            // inform external and stop waiting for card
-            this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
-            this.stopWaitingForCard();
-        } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
-            // inform external
-            externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
-        }
-
-        this.readerIsConnected = false;
-    }
-
-    @Override
-    public void cardReaderError(String message) {
-        this.readerIsConnected = false;
-
-        if (this.readerIsWaitingForCard) {
-            // inform delegate
-            this.externalCardReaderHelper.informExternalCardReaderError(Error.getCardReaderStatusError(message));
-
-            // stop device
-            this.stopDevice();
+    private int getCardReaderTimeout() {
+        // timeout depends on config
+        if (config.shouldRestartTransactionAfterOtherErrors()) {
+            // never time out
+            return CARD_READER_TIMEOUT_INFINITE_SEC;
+        } else {
+            return CARD_READER_TIMEOUT_DEFAULT_SEC;
         }
     }
 }
-
-

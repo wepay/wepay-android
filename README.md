@@ -60,9 +60,13 @@ compile 'com.google.code.gson:gson:2.2.2'
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 ~~~
 
 + Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions from the user. See the WePayExample app's MainActivity.java for a sample implementation.
++ Android 6 also requires COARSE_LOCATION permission in order to scan for Bluetooth devices. This is most likely a bug in Android. You can view a discussion of the topic [here] (https://code.google.com/p/android/issues/detail?id=189090&q=ble%20android%206.0&colspec=ID%20Type%20Status%20Owner%20Summary%20Stars).
 
 + Clean and build the project using your IDE or from the command line by going to the project's base directory and running:
 ~~~{.java}

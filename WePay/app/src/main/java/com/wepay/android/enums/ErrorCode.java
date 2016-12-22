@@ -68,7 +68,19 @@ public enum ErrorCode {
     FAILED_TO_GET_BATTERY_LEVEL(10033),
 
     /** The card reader not connected error. */
-    CARD_READER_NOT_CONNECTED_ERROR(10034);
+    CARD_READER_NOT_CONNECTED_ERROR(10034),
+
+    /** The card reader model not supported error. */
+    CARD_READER_MODEL_NOT_SUPPORTED(10035),
+
+    /** The invalid transaction amount error. */
+    INVALID_TRANSACTION_AMOUNT(10036),
+
+    /** The invalid transaction currency code error. */
+    INVALID_TRANSACTION_CURRENCY_CODE(10037),
+
+    /** The invalid transaction account id error. */
+    INVALID_TRANSACTION_ACCOUNT_ID(10038);
 
     /** The code. */
     private final int code;
@@ -138,6 +150,14 @@ public enum ErrorCode {
                 return "FAILED_TO_GET_BATTERY_LEVEL";
             case 10034:
                 return "CARD_READER_NOT_CONNECTED_ERROR";
+            case 10035:
+                return "CARD_READER_MODEL_NOT_SUPPORTED";
+            case 10036:
+                return "INVALID_TRANSACTION_AMOUNT";
+            case 10037:
+                return "INVALID_TRANSACTION_CURRENCY_CODE";
+            case 10038:
+                return "INVALID_TRANSACTION_ACCOUNT_ID";
         default:
             return "UNDEFINED_ERROR";
         }

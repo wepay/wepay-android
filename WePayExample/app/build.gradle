@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.wepay.android.example"
-        minSdkVersion 11
+        minSdkVersion 12
         targetSdkVersion 23
     }
 
@@ -19,7 +19,7 @@ android {
 }
 
 dependencies {
-    compile(name: 'wepay-android-2.0.0', ext: 'aar')
+    compile(name: 'wepay-android-3.0.0-beta-1', ext: 'aar')
 
     compile 'com.android.support:appcompat-v7:23.0.0'
     compile 'com.android.support:support-v4:23.0.0'

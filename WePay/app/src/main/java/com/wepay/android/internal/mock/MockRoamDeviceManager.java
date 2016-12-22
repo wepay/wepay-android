@@ -8,6 +8,7 @@ import com.roam.roamreaderunifiedapi.ConfigurationManager;
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.TransactionManager;
 import com.roam.roamreaderunifiedapi.callback.AudioJackPairingListener;
+import com.roam.roamreaderunifiedapi.callback.AudioJackPairingListenerWithDevice;
 import com.roam.roamreaderunifiedapi.callback.CalibrationListener;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
 import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
@@ -18,7 +19,9 @@ import com.roam.roamreaderunifiedapi.constants.DeviceStatus;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
+import com.roam.roamreaderunifiedapi.constants.CommunicationType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
+import com.roam.roamreaderunifiedapi.callback.ReleaseHandler;
 import com.wepay.android.models.MockConfig;
 
 import java.util.HashMap;
@@ -32,6 +35,7 @@ public class MockRoamDeviceManager implements DeviceManager{
     private Context context;
     private MockConfig mockConfig;
     private DeviceStatusHandler deviceStatusHandler;
+    private boolean isReady = false;
     private static Handler mainThreadHandler = new Handler(Looper.getMainLooper());
 
     private void runOnMainThread(Runnable runnable, long delayMillis) {
@@ -55,6 +59,8 @@ public class MockRoamDeviceManager implements DeviceManager{
     public boolean initialize(Context context, final DeviceStatusHandler deviceStatusHandler) {
         this.context = context;
         this.deviceStatusHandler = deviceStatusHandler;
+        this.isReady = true;
+
         // Update ConfigurationManager and TransactionManager singleton objects
         // so that states don't persist through tests
         ((MockRoamConfigurationManager) getConfigurationManager())
@@ -100,7 +106,7 @@ public class MockRoamDeviceManager implements DeviceManager{
 
     @Override
     public boolean isReady() {
-        return false;
+        return this.isReady;
     }
 
     /**
@@ -120,7 +126,17 @@ public class MockRoamDeviceManager implements DeviceManager{
     }
 
     @Override
+    public void release(ReleaseHandler releaseHandler) {
+
+    }
+
+    @Override
     public void requestPairing(AudioJackPairingListener audioJackPairingListener) {
+
+    }
+
+    @Override
+    public void requestPairing(AudioJackPairingListenerWithDevice pairListener) {
 
     }
 
@@ -130,7 +146,18 @@ public class MockRoamDeviceManager implements DeviceManager{
     }
 
     @Override
-    public void searchDevices(Context context, SearchListener searchListener) {
+    public void searchDevices(Context ctx, Boolean includeBondedDevices, SearchListener searchListener) {
+
+    }
+
+    @Override
+    public void searchDevices(Context ctx, Boolean includeBondedDevices, Long durationInMilliseconds, SearchListener searchListener) {
+
+    }
+
+    @Deprecated
+    @Override
+    public void searchDevices(Context ctx, SearchListener searchListener) {
 
     }
 
@@ -141,7 +168,7 @@ public class MockRoamDeviceManager implements DeviceManager{
 
     @Override
     public void registerDeviceStatusHandler(DeviceStatusHandler deviceStatusHandler) {
-
+        this.deviceStatusHandler = deviceStatusHandler;
     }
 
     @Override
@@ -152,6 +179,11 @@ public class MockRoamDeviceManager implements DeviceManager{
     @Override
     public void updateFirmware(String s, DeviceResponseHandler deviceResponseHandler) {
 
+    }
+
+    @Override
+    public CommunicationType getActiveCommunicationType() {
+        throw new java.lang.UnsupportedOperationException("Unimplemented method: getActiveCommunicationType()");
     }
 
     @Override

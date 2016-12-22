@@ -1,3 +1,9 @@
+2016-12-22
+* Released version 3.0.0-beta-1
+* Added support for Moby3000 Bluetooth card reader
+* Updated permissions for the example app to support searching for and interfacing with the new card reader
+* Fixed logic that caused hanging in certain cases during startTransactionForReading()
+
 2016-11-16
 * Released version 2.0.0
 * CardReaderTransactionInfoCallback.useTransactionInfo() and AuthorizationInfo.getAuthorizedAmount() now use BigDecimal instead of double for amount

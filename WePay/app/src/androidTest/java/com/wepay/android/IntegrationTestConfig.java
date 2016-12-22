@@ -439,6 +439,7 @@ public class IntegrationTestConfig {
     private void restartTestHelper(int latchCount, final List<CardReaderStatus>statuses, Config config, Boolean shouldSucceed, Boolean readOnly) throws InterruptedException {
         final WePay wePay = new WePay(config);
         final CountDownLatch countDownLatch = new CountDownLatch(latchCount);
+        List<CardReaderStatus> statusesCopy;
 
         final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
             @Override
@@ -518,7 +519,9 @@ public class IntegrationTestConfig {
 
         countDownLatch.await(3000, TimeUnit.MILLISECONDS);
 
-        Log.d("restartTestHelper", "statuses: " + statuses.toString());
+        // Copy the status list to avoid printing the status list at the same time it's modified.
+        statusesCopy = new ArrayList<>(statuses);
+        Log.d("restartTestHelper", "statuses: " + statusesCopy.toString());
 
         if (shouldSucceed) {
             Assert.assertTrue(cardReaderHandler.onSuccessCalled);

@@ -221,6 +221,11 @@ public class MockRoamTransactionManager implements TransactionManager{
     }
 
     @Override
+    public void cancelLastCommand() {
+
+    }
+
+    @Override
     public void waitForMagneticCardSwipe(DeviceResponseHandler deviceResponseHandler) {
 
     }
@@ -231,7 +236,7 @@ public class MockRoamTransactionManager implements TransactionManager{
     }
 
     @Override
-    public void cancelLastCommand() {
+    public void waitForCardRemoval(Integer cardRemovalTimeout, DeviceResponseHandler handler) {
 
     }
 

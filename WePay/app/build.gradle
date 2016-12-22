@@ -7,10 +7,10 @@ android {
     useLibrary 'org.apache.http.legacy'
 
     defaultConfig {
-        minSdkVersion 8
+        minSdkVersion 12
         targetSdkVersion 23
         versionCode 1
-        versionName '2.0.0'
+        versionName '3.0.0-beta-1'
         project.archivesBaseName = "wepay-android"
         project.version = android.defaultConfig.versionName
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -53,6 +53,7 @@ configurations {
 dependencies {
     compile 'com.android.support:support-v4:23.2.0'
     compile 'com.google.code.gson:gson:2.6.2'
+
     compile files('libs/android-async-http-1.4.5.jar')
     compile fileTree(dir: 'libs/internal', include: ['*.jar'])
     androidTestCompile 'com.android.support.test:runner:0.5'
@@ -113,5 +114,3 @@ bintray {
         licenses = ['Apache-2.0']
     }
 }
-
-

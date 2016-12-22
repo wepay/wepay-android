@@ -15,8 +15,8 @@ import com.roam.roamreaderunifiedapi.data.ApplicationIdentifier;
 import com.wepay.android.AuthorizationHandler;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.PaymentMethod;
-import com.wepay.android.internal.CardReader.DeviceManagers.DeviceManagerDelegate;
-import com.wepay.android.internal.CardReader.DeviceManagers.RP350XManager;
+import com.wepay.android.internal.CardReader.Utilities.TransactionUtilities;
+import com.wepay.android.internal.CardReaderDirector.CardReaderRequest;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -64,19 +64,21 @@ public class DipTransactionHelper implements DeviceResponseHandler {
     /** The roam device manager */
     private DeviceManager roamDeviceManager = null;
 
-    /** The device manager delegate **/
-    private DeviceManagerDelegate deviceManagerDelegate = null;
-
     /** The external card reader helper. */
     private ExternalCardReaderHelper externalCardReaderHelper = null;
 
     /** The dip config helper. */
     private DipConfigHelper dipConfighelper = null;
 
-    /** TheRP350X manager. */
-    private RP350XManager delegate = null;
+    /** The TransactionDelegate. */
+    private TransactionDelegate delegate = null;
+
+    /** The TransactionUtilities */
+    private TransactionUtilities transactionUtilities = null;
 
     private PaymentInfo paymentInfo = null;
+
+    private CardReaderRequest cardReaderRequest = null;
 
     private String selectedAID;
     private String applicationCryptogram;
@@ -95,20 +97,25 @@ public class DipTransactionHelper implements DeviceResponseHandler {
     private Error authorizationError;
     private Runnable postStopRunnable = null;
 
-    public DipTransactionHelper(Config config, RP350XManager rp350xManager, DeviceManagerDelegate deviceManagerDelegate, DipConfigHelper dipConfighelper) {
+    public DipTransactionHelper(Config config,
+                                ExternalCardReaderHelper externalCardReaderHelper,
+                                TransactionDelegate transactionDelegate,
+                                DipConfigHelper dipConfighelper) {
         this.config = config;
-        this.deviceManagerDelegate = deviceManagerDelegate;
+        this.externalCardReaderHelper = externalCardReaderHelper;
         this.dipConfighelper = dipConfighelper;
-        this.delegate = rp350xManager;
+        this.delegate = transactionDelegate;
+        this.transactionUtilities = new TransactionUtilities(config, externalCardReaderHelper);
     }
 
-    public void performEMVTransactionStartCommand(BigDecimal amount, String currencyCode, long accountId, DeviceManager roamDeviceManager,  ExternalCardReaderHelper externalCardReaderHelper) {
+    public void performEMVTransactionStartCommand(BigDecimal amount, String currencyCode, long accountId, DeviceManager roamDeviceManager, CardReaderRequest request) {
         this.amount = amount;
         this.currencyCode = currencyCode;
         this.accountId = accountId;
         this.roamDeviceManager = roamDeviceManager;
-        this.externalCardReaderHelper = externalCardReaderHelper;
+        this.cardReaderRequest = request;
 
+        this.transactionUtilities.setCardReaderRequest(request);
         this.startTransaction();
     }
 
@@ -292,7 +299,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         if (error != null) {
             if (this.shouldIssueReversal) {
                 // shouldIssueReversal is set inside the validator
-                this.deviceManagerDelegate.issueReversal(Long.parseLong(this.creditCardId), this.accountId, data);
+                this.transactionUtilities.issueReversal(Long.parseLong(this.creditCardId), this.accountId, data);
             }
 
             // we found an error, react to it if we're supposed to
@@ -308,7 +315,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             switch (cmd) {
                 case EMVStartTransaction:
                     if (responseType == ResponseType.MAGNETIC_CARD_DATA) {
-                        this.deviceManagerDelegate.handleSwipeResponse(data, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, this.isFallbackSwipe, new DeviceManagerDelegate.TransactionResponseHandler() {
+                        this.transactionUtilities.handleSwipeResponse(data, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, this.isFallbackSwipe, new TransactionUtilities.TransactionResponseHandler() {
                             @Override
                             public void onSuccess(JSONObject response) {
                                 reactToError(null, PaymentMethod.SWIPE);
@@ -324,9 +331,20 @@ public class DipTransactionHelper implements DeviceResponseHandler {
                                 reactToError(null, PaymentMethod.SWIPE);
                             }
                         });
-
                     } else if (responseType == ResponseType.LIST_OF_AIDS) {
-                        this.performApplicationSelection((List<ApplicationIdentifier>) data.get(Parameter.ListOfApplicationIdentifiers));
+                         List<ApplicationIdentifier> applications = (List<ApplicationIdentifier>) data.get(Parameter.ListOfApplicationIdentifiers);
+
+                        if (this.cardReaderRequest == CardReaderRequest.CARD_READER_FOR_TOKENIZING) {
+                            this.performApplicationSelection(applications);
+                        } else if (this.cardReaderRequest == CardReaderRequest.CARD_READER_FOR_READING) {
+                            final DeviceResponseHandler transactionResponseHandler = this;
+
+                            this.selectedAID = applications.get(0).getAID();
+                            roamDeviceManager.getTransactionManager().sendCommand(getFinalApplicationSelectionInputMap(applications.get(0)), transactionResponseHandler);
+                        } else {
+                            String requestType = this.cardReaderRequest == null ? "null" : this.cardReaderRequest.toString();
+                            Log.e("wepay_sdk", "Unhandled request type: " + requestType);
+                        }
                     } else {
                         this.handleStartTransactionResponse(data);
                     }
@@ -404,7 +422,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         String firstName = RoamHelper.getFirstName(data);
         String lastName = RoamHelper.getLastName(data);
         String paymentDescription = (String) data.get(Parameter.PAN);
-        paymentDescription = this.deviceManagerDelegate.sanitizePAN(paymentDescription);
+        paymentDescription = this.transactionUtilities.sanitizePAN(paymentDescription);
 
         this.paymentInfo = new PaymentInfo(firstName, lastName, paymentDescription, PaymentMethod.DIP, data);
 
@@ -412,7 +430,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.applicationCryptogram = (String) data.get(Parameter.ApplicationCryptogram);
 
 
-        this.deviceManagerDelegate.handlePaymentInfo(paymentInfo, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, false, new DeviceManagerDelegate.TransactionResponseHandler() {
+        this.transactionUtilities.handlePaymentInfo(paymentInfo, this.roamDeviceManager.getType().toString(), this.amount, this.currencyCode, this.accountId, false, new TransactionUtilities.TransactionResponseHandler() {
             @Override
             public void onSuccess(JSONObject response) {
                 String tempAuthCode = response.isNull("authorisation_code") ? null : response.optString("authorisation_code");
@@ -451,6 +469,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             public void onFailure(Error error) {
                 authorizationError = error;
                 consumeAuthenticationData(null, null, null);
+                Log.d("wepay_sdk", "handlePaymentInfo onFailure");
             }
 
             @Override
@@ -504,20 +523,35 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.postStopRunnable = new Runnable() {
             @Override
             public void run() {
-                if (delegate.shouldRestartTransaction(error, paymentMethod)) {
+                if (shouldRestartTransaction(error, paymentMethod)) {
                     // restart transaction
                     startTransaction();
-                } else if (delegate.shouldStopCardReaderAfterTransaction()){
-                    // stop reader
-                    delegate.stopDevice();
                 } else {
                     // mark transaction completed, but leave reader running
-                    delegate.transactionCompleted();
+                    delegate.onTransactionCompleted();
                 }
             }
         };
 
         this.executeCommand(Command.EMVTransactionStop, this);
+    }
+
+    Boolean shouldRestartTransaction(Error error, PaymentMethod paymentMethod) {
+        if (error != null) {
+            // if the error code was a general error
+            if (error.getErrorDomain().equals(Error.ERROR_DOMAIN_SDK) && error.getErrorCode().equals(com.wepay.android.enums.ErrorCode.CARD_READER_GENERAL_ERROR.getCode())) {
+                // return whether or not we're configured to restart on general error
+                return this.config.shouldRestartTransactionAfterGeneralError();
+            }
+            // return whether or not we're configured to restart on other errors
+            return this.config.shouldRestartTransactionAfterOtherErrors();
+        } else if (paymentMethod.equals(PaymentMethod.SWIPE)) {
+            // return whether or not we're configured to restart on successful swipe
+            return this.config.shouldRestartTransactionAfterSuccess();
+        } else {
+            // don't restart on successful dip
+            return false;
+        }
     }
 
     Boolean shouldReactToError(Error error) {
@@ -683,6 +717,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         } else {
             // complete the transaction
             this.executeCommand(Command.EMVCompleteTransaction, this);
+            Log.d("wepay_sdk", "CMD: complete transaction");
         }
     }
 

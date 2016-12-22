@@ -33,7 +33,7 @@ public class WepayClient {
     private static final String WEPAY_API_VERSION = "2016-03-30";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v2.0.0";
+    private static final String USER_AGENT = "WePay Android SDK v3.0.0-beta-1";
 
     /** The client. */
     private static AsyncHttpClient client = new AsyncHttpClient();

@@ -1,12 +1,14 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
 import android.content.Context;
+import android.os.Looper;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.wepay.android.enums.ErrorCode;
+import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
 
@@ -144,5 +146,45 @@ public class UnitTestDipTransactionHelper {
         String result = dipTransactionHelper.convertResponseCodeToHexString("response");
 
         Assert.assertEquals(expected, result);
+    }
+
+    @Test
+    public void testShouldKeepWaitingForCard1() {
+        // Constructor of IngenicoCardReaderManager calls `new Handler()`
+        // which requires the current thread to be a looper thread
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
+
+        Integer errorCode = ErrorCode.CARD_READER_GENERAL_ERROR.getCode();
+        Error error = new Error(errorCode, Error.ERROR_DOMAIN_SDK, null, null);
+
+        boolean result = dipTransactionHelper.shouldRestartTransaction(error, PaymentMethod.SWIPE);
+        Assert.assertEquals(true, result);
+    }
+
+    @Test
+    public void testShouldKeepWaitingForCard2() {
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
+
+        Integer errorCode = ErrorCode.CARD_READER_GENERAL_ERROR.getCode();
+        Error error = new Error(errorCode, Error.ERROR_DOMAIN_API, null, null);
+
+        boolean result = dipTransactionHelper.shouldRestartTransaction(error, PaymentMethod.SWIPE);
+        Assert.assertEquals(false, result);
+    }
+
+    @Test
+    public void testShouldKeepWaitingForCard3() {
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
+
+        Error error = new Error(null, Error.ERROR_DOMAIN_API, null, null);
+
+        boolean result = dipTransactionHelper.shouldRestartTransaction(error, PaymentMethod.SWIPE);
+        Assert.assertEquals(false, result);
     }
 }

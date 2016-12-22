@@ -148,7 +148,7 @@ public class IntegrationTest {
             }
         });
 
-        // Waiting for RP350X_CONNECTION_TIME_SEC = 7, set in RP350XManager
+        // Waiting for RP350X_CONNECTION_TIME_SEC = 7, set in IngenicoCardReaderManager
         countDownLatch.await(7500, TimeUnit.MILLISECONDS);
 
         Assert.assertTrue(cardReaderHandler.notConnectedStatusChangeCalled);
@@ -506,7 +506,7 @@ public class IntegrationTest {
         Assert.assertEquals(new BigDecimal("24.61"), authorizationHandler.authorizationInfo.getAuthorizedAmount());
     }
 
-    // Possible errors returned by validateAuthInfo() method in RP350XManager class
+    // Possible errors returned by validateAuthInfo() method in IngenicoCardReaderManager class
     @Test
     public void testTransactionInfoErrorForAmountTooSmall() throws InterruptedException {
         Config config = getConfig();
@@ -538,7 +538,7 @@ public class IntegrationTest {
         countDownLatch.await(1000, TimeUnit.MILLISECONDS);
 
         Assert.assertTrue(cardReaderHandler.onErrorCalled);
-        Assert.assertEquals(Error.getInvalidTransactionInfoError(), cardReaderHandler.error);
+        Assert.assertEquals(Error.getInvalidTransactionAmountError(), cardReaderHandler.error);
     }
 
     @Test
@@ -572,7 +572,7 @@ public class IntegrationTest {
         countDownLatch.await(1000, TimeUnit.MILLISECONDS);
 
         Assert.assertTrue(cardReaderHandler.onErrorCalled);
-        Assert.assertEquals(Error.getInvalidTransactionInfoError(), cardReaderHandler.error);
+        Assert.assertEquals(Error.getInvalidTransactionAmountError(), cardReaderHandler.error);
     }
 
     @Test
@@ -606,7 +606,7 @@ public class IntegrationTest {
         countDownLatch.await(1000, TimeUnit.MILLISECONDS);
 
         Assert.assertTrue(cardReaderHandler.onErrorCalled);
-        Assert.assertEquals(Error.getInvalidTransactionInfoError(), cardReaderHandler.error);
+        Assert.assertEquals(Error.getInvalidTransactionAmountError(), cardReaderHandler.error);
     }
 
     @Test
@@ -640,7 +640,7 @@ public class IntegrationTest {
         countDownLatch.await(1000, TimeUnit.MILLISECONDS);
 
         Assert.assertTrue(cardReaderHandler.onErrorCalled);
-        Assert.assertEquals(Error.getInvalidTransactionInfoError(), cardReaderHandler.error);
+        Assert.assertEquals(Error.getInvalidTransactionAccountIDError(), cardReaderHandler.error);
     }
 
     @Test
@@ -653,7 +653,7 @@ public class IntegrationTest {
             @Override
             public void onTransactionInfoRequested(CardReaderTransactionInfoCallback callback) {
                 // This callback is overridden with empty body so startCardReaderForReading()
-                // is stuck here and not calling stopDevice()
+                // is stuck here and not calling stopCardReader()
             }
 
             @Override

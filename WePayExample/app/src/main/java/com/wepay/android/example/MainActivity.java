@@ -46,7 +46,9 @@ import org.json.JSONObject;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * The Class MainActivity.
@@ -73,10 +75,9 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
 
     public static final String TAG = "wepay_sdk";
 
-    private static final int REQUEST_AUDIO = 0;
+    private static final int REQUEST_PERMISSION = 1;
 
-    Boolean isFirstAskForAudioPermission = true;
-
+    private Map<String, PermissionRequest> permissionRequests = new HashMap<>();
 
     /* (non-Javadoc)
      * @see android.support.v7.app.ActionBarActivity#onCreate(android.os.Bundle)
@@ -86,11 +87,12 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // For Android 6 / M / API 23 and later
-        this.requestAudioPermission();
+        mLayout = findViewById(R.id.example_main_layout);
+
+        this.requestAppPermissions();
 
         this.setupUI();
-        
+
         // Initialize WePay
         context = getApplicationContext();
 
@@ -288,7 +290,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     @Override
     public void onError(Bitmap image, String checkoutId, Error error) {
         this.writeToConsole("\nSignature failed! error:");
-        this.writeToConsole(error.toString());
+        this.writeToConsole(error.getErrorDescription());
         this.setStatusText("Signature failed");
     }
 
@@ -454,48 +456,108 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     ////////////////////////////////
-    // Android M - Audio permissions
+    // Android M - Permissions
     ////////////////////////////////
 
-    private void requestAudioPermission() {
+    private void requestAppPermissions() {
+        PermissionRequest audioPermissionRequest, coarseLocationPermissionRequest;
 
-        mLayout = findViewById(R.id.example_main_layout);
+        audioPermissionRequest = new PermissionRequest(Manifest.permission.RECORD_AUDIO, "record audio");
+        coarseLocationPermissionRequest = new PermissionRequest(Manifest.permission.ACCESS_COARSE_LOCATION, "coarse location");
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
+        this.addPendingPermission(audioPermissionRequest);
+        this.addPendingPermission(coarseLocationPermissionRequest);
 
-            Log.i(TAG, "Audio permission has NOT been granted. Requesting permission.");
+        // For Android 6 / M / API 23 and later
+        this.requestPendingPermissions(this.permissionRequests, REQUEST_PERMISSION);
+    }
 
-            // BEGIN_INCLUDE(audio_permission_request)
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.RECORD_AUDIO)) {
-                // Provide an additional rationale to the user if the permission was not granted
-                // and the user would benefit from additional context for the use of the permission.
-                // For example if the user has previously denied the permission.
-                Log.i(TAG,
-                        "Displaying audio permission rationale to provide additional context.");
-                Snackbar.make(mLayout, "Permission to record audio is required for using the card reader.",
-                        Snackbar.LENGTH_INDEFINITE)
-                        .setAction("OK", new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                ActivityCompat.requestPermissions(MainActivity.this,
-                                        new String[]{Manifest.permission.RECORD_AUDIO},
-                                        REQUEST_AUDIO);
-                            }
-                        })
-                        .show();
-            } else {
+    /**
+     * Adds a request permission to the permissionRequests map if the app does not yet have
+     * permissions.
+     * */
+    private void addPendingPermission(PermissionRequest permission) {
+        int permissionLevel = ActivityCompat.checkSelfPermission(this, permission.androidPermissionType);
 
-                // Audio permission has not been granted yet. Request it directly.
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
-                        REQUEST_AUDIO);
-            }
-            // END_INCLUDE(audio_permission_request)
+        if (permissionLevel != PackageManager.PERMISSION_GRANTED) {
+            this.permissionRequests.put(permission.androidPermissionType, permission);
         } else {
-            // Do nothing, we have audio permissions already
-            Log.i(TAG, "Audio permission has previously been granted.");
+            // Do nothing, we have permissions already
+            Log.i(TAG, permission.shortPermissionType + " has previously been granted.");
         }
+    }
+
+    private void requestPendingPermissions(Map<String, PermissionRequest> permissions, final int requestType) {
+        if (permissions.size() > 0) {
+            final String[] androidPermissions = new String[permissions.size()];
+            int index = 0;
+            String shortPermissions = "";
+
+            for (PermissionRequest permission : permissions.values()) {
+                androidPermissions[index] = permission.androidPermissionType;
+                index++;
+
+                shortPermissions += permission.shortPermissionType;
+
+                if (index < permissions.size()) {
+                    shortPermissions += ", ";
+                }
+            }
+
+            Log.i(TAG, "Displaying permission rationale to provide additional context.");
+
+            Snackbar.make(mLayout, shortPermissions + " is required for using the card reader.",
+                Snackbar.LENGTH_INDEFINITE)
+                .setAction("OK", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                androidPermissions, requestType);
+                    }
+                })
+                .show();
+        }
+    }
+
+    private void handleRequestPermissionsResponse(int grantResult, String permissionType) {
+        // BEGIN_INCLUDE(permission_result)
+        // Received permission result for permission.
+        Log.i(TAG, "Received response for " + permissionType + " permission request.");
+
+        PermissionRequest permissionRequest = this.permissionRequests.get(permissionType);
+        String shortPermissionType = permissionType;
+
+        if (permissionRequest != null) {
+            shortPermissionType = permissionRequest.shortPermissionType;
+        }
+
+        // Check if the only required permission has been granted
+        if (grantResult == PackageManager.PERMISSION_GRANTED) {
+            // Permission has been granted, preview can be displayed
+            Log.i(TAG, permissionType + " permission has now been granted. Showing preview.");
+            Snackbar.make(mLayout, shortPermissionType + " permission available",
+                    Snackbar.LENGTH_SHORT).show();
+
+            // Remove the granted permission from our permission requests.
+            this.permissionRequests.remove(permissionType);
+        } else {
+            Log.i(TAG, permissionType + " permission was NOT granted.");
+
+            if (permissionRequest.isFirstAskForPermission) {
+                permissionRequest.isFirstAskForPermission = false;
+            } else {
+                Snackbar.make(mLayout, shortPermissionType + " permission not granted, card reader will not work",
+                        Snackbar.LENGTH_SHORT).show();
+
+                // The user refuses to grant this permission, so remove it from the list.
+                this.permissionRequests.remove(permissionType);
+            }
+        }
+        // END_INCLUDE(permission_result)
+    }
+
+    private boolean isRequestCodeHandled(int requestCode) {
+        return requestCode == REQUEST_PERMISSION;
     }
 
     /**
@@ -504,33 +566,27 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-
-        if (requestCode == REQUEST_AUDIO) {
-            // BEGIN_INCLUDE(permission_result)
-            // Received permission result for audio permission.
-            Log.i(TAG, "Received response for Audio permission request.");
-
-            // Check if the only required permission has been granted
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Audio permission has been granted, preview can be displayed
-                Log.i(TAG, "Audio permission has now been granted. Showing preview.");
-                Snackbar.make(mLayout, "audio permission available",
-                        Snackbar.LENGTH_SHORT).show();
-            } else {
-                Log.i(TAG, "Audio permission was NOT granted.");
-
-                if (this.isFirstAskForAudioPermission) {
-                    this.isFirstAskForAudioPermission = false;
-                    this.requestAudioPermission();
-                } else {
-                    Snackbar.make(mLayout, "audio permission not granted, card reader will not work",
-                            Snackbar.LENGTH_SHORT).show();
-                }
+        if (isRequestCodeHandled(requestCode)) {
+            for (int i = 0; i < permissions.length; ++i) {
+                handleRequestPermissionsResponse(grantResults[i], permissions[i]);
             }
-            // END_INCLUDE(permission_result)
 
+            this.requestPendingPermissions(this.permissionRequests, requestCode);
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    private class PermissionRequest {
+        String androidPermissionType;
+        String shortPermissionType;
+        Boolean isFirstAskForPermission;
+
+        PermissionRequest(String androidPermissionType,
+                          String shortPermissionType) {
+            this.androidPermissionType = androidPermissionType;
+            this.shortPermissionType = shortPermissionType;
+            this.isFirstAskForPermission = true;
         }
     }
 }

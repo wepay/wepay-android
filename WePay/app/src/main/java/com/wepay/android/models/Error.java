@@ -271,13 +271,33 @@ public class Error extends Exception {
     }
 
     /** \internal
-     * Instantiates invalid transaction info error.
+     * Instantiates invalid transaction amount error.
      *
-     * @return the invalid transaction info error
+     * @return the invalid transaction amount error
      */
 
-    public static Error getInvalidTransactionInfoError() {
-        return new Error(ErrorCode.INVALID_TRANSACTION_INFO.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_SDK, "The provided transaction info is invalid.");
+    public static Error getInvalidTransactionAmountError() {
+        return new Error(ErrorCode.INVALID_TRANSACTION_AMOUNT.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_SDK, "The provided transaction amount is invalid.");
+    }
+
+    /** \internal
+     * Instantiates invalid transaction currency code error.
+     *
+     * @return the invalid transaction currency code error
+     */
+
+    public static Error getInvalidTransactionCurrencyCodeError() {
+        return new Error(ErrorCode.INVALID_TRANSACTION_CURRENCY_CODE.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_SDK, "The provided currency code is invalid.");
+    }
+
+    /** \internal
+     * Instantiates invalid transaction account ID error.
+     *
+     * @return the invalid transaction account ID  error
+     */
+
+    public static Error getInvalidTransactionAccountIDError() {
+        return new Error(ErrorCode.INVALID_TRANSACTION_ACCOUNT_ID.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_SDK, "The provided account ID is invalid.");
     }
 
     /** \internal

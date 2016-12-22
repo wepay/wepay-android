@@ -91,16 +91,8 @@ public class ExternalCardReaderHelper {
         }
     }
 
-    public AuthorizationHandler getAuthorizationHandler() {
-        return authorizationHandler;
-    }
-
     public void setAuthorizationHandler(AuthorizationHandler authorizationHandler) {
         this.authorizationHandler = authorizationHandler;
-    }
-
-    public CardReaderHandler getCardReaderHandler() {
-        return cardReaderHandler;
     }
 
     public void setCardReaderHandler(CardReaderHandler cardReaderHandler) {

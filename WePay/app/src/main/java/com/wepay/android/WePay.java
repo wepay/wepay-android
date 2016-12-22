@@ -9,7 +9,7 @@ import android.util.Log;
 
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.wepay.android.enums.PaymentMethod;
-import com.wepay.android.internal.CardReaderHelper;
+import com.wepay.android.internal.CardReaderDirector;
 import com.wepay.android.internal.CheckoutHelper;
 import com.wepay.android.internal.RiskHelper;
 import com.wepay.android.internal.WepayClient;
@@ -33,7 +33,7 @@ public class WePay {
     private Config config;
 
     /** The card reader helper. */
-    private CardReaderHelper cardReaderHelper;
+    private CardReaderDirector cardReaderDirector;
 
     /** The checkout helper. */
     private CheckoutHelper checkoutHelper;
@@ -55,9 +55,9 @@ public class WePay {
 
         // check if card reader libraries are included
         try  {
-            Class.forName("com.wepay.android.internal.CardReaderHelper");
+            Class.forName("com.wepay.android.internal.CardReaderDirector");
             this.isCardReaderAvailable = true;
-            this.cardReaderHelper = new CardReaderHelper(config);
+            this.cardReaderDirector = new CardReaderDirector(config);
         } catch (final ClassNotFoundException e) {
             this.isCardReaderAvailable = false;
         } catch (final NoClassDefFoundError e) {
@@ -94,7 +94,7 @@ public class WePay {
      */
     public void startTransactionForReading(CardReaderHandler cardReaderHandler) {
         if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.startCardReaderForReading(cardReaderHandler);
+            this.cardReaderDirector.startCardReaderForReading(cardReaderHandler);
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -122,8 +122,8 @@ public class WePay {
      */
     public void startTransactionForTokenizing(CardReaderHandler cardReaderHandler, TokenizationHandler tokenizationHandler, AuthorizationHandler authorizationHandler) {
         if (this.isCardReaderAvailable) {
-            String sessionId = (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
-            this.cardReaderHelper.startCardReaderForTokenizing(cardReaderHandler, tokenizationHandler, authorizationHandler, sessionId);
+            String sessionId = getSessionID();
+            this.cardReaderDirector.startCardReaderForTokenizing(cardReaderHandler, tokenizationHandler, authorizationHandler, sessionId);
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -135,7 +135,7 @@ public class WePay {
      */
     public void stopCardReader() {
         if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.stopCardReader();
+            this.cardReaderDirector.stopCardReader();
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -148,7 +148,7 @@ public class WePay {
      */
     public void calibrateCardReader(CalibrationHandler calibrationHandler) {
         if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.calibrateCardReader(calibrationHandler);
+            this.cardReaderDirector.calibrateCardReader(calibrationHandler);
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -161,7 +161,7 @@ public class WePay {
      */
     public void getCardReaderBatteryLevel(BatteryLevelHandler batteryLevelHandler) {
         if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.getCardReaderBatteryLevel(batteryLevelHandler);
+            this.cardReaderDirector.getCardReaderBatteryLevel(batteryLevelHandler);
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -175,7 +175,7 @@ public class WePay {
      * @param tokenizationHandler the tokenization handler
      */
     public void tokenize(final PaymentInfo paymentInfo, final TokenizationHandler tokenizationHandler) {
-        String sessionId = (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
+        String sessionId = getSessionID();
 
         if (paymentInfo.getPaymentMethod() == PaymentMethod.MANUAL) {
             Map<String, Object> paramMap = getManualParamMap(paymentInfo, sessionId);
@@ -294,5 +294,9 @@ public class WePay {
         }
 
         return params;
+    }
+
+    private String getSessionID() {
+        return (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
     }
 }
