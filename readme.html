@@ -104,7 +104,7 @@ Replace [version] in following steps with the sdk version you are using </p>
 <li>wepay-android-1.0.0-sources.jar</li>
 </ol>
 </li>
-<li><p>Open build.gradle file for you app module (not the build.gradle file of the project) and add the following</p></li>
+<li><p>Open build.gradle file for your app module (not the build.gradle file of the project) and add the following</p></li>
 </ul>
 
 <div class="highlight highlight-source-java"><pre>repositories{
@@ -132,10 +132,14 @@ compile <span class="pl-s"><span class="pl-pds">'</span>com.google.code.gson:gso
 
 <div class="highlight highlight-source-java"><pre><span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.RECORD_AUDIO<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span>
 <span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.MODIFY_AUDIO_SETTINGS<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span>
-<span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.INTERNET<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span></pre></div>
+<span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.INTERNET<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span>
+<span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.BLUETOOTH<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span>
+<span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.BLUETOOTH_ADMIN<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span>
+<span class="pl-k">&lt;</span>uses<span class="pl-k">-</span>permission android<span class="pl-k">:</span>name<span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>android.permission.ACCESS_COARSE_LOCATION<span class="pl-pds">"</span></span> <span class="pl-k">/</span><span class="pl-k">&gt;</span></pre></div>
 
 <ul>
-<li><p>Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions fromt the user. See the WePayExample app's MainActivity.java for a sample implementation.</p></li>
+<li>Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions from the user. See the WePayExample app's MainActivity.java for a sample implementation.</li>
+<li><p>Android 6 also requires COARSE_LOCATION permission in order to scan for Bluetooth devices. This is most likely a bug in Android. You can view a discussion of the topic <a href="https://code.google.com/p/android/issues/detail?id=189090&amp;q=ble%20android%206.0&amp;colspec=ID%20Type%20Status%20Owner%20Summary%20Stars">here</a>.</p></li>
 <li><p>Clean and build the project using your IDE or from the command line by going to the project's base directory and running:</p></li>
 </ul>
 
@@ -232,7 +236,7 @@ When you are ready, look at the samples below to learn how to interact with the 
 <li>Initialize the WePay object and assign it to the property</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre><span class="pl-v">this</span><span class="pl-k">.</span>wepay <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-smi">WePay</span>(config);</pre></div>
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-smi">WePay</span>(config);</pre></div>
 
 <h5>
 <a id="user-content-optional-providing-permission-to-use-location-services-for-fraud-detection" class="anchor" href="#optional-providing-permission-to-use-location-services-for-fraud-detection" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>(optional) Providing permission to use location services for fraud detection</h5>
@@ -262,85 +266,85 @@ When you are ready, look at the samples below to learn how to interact with the 
 <li>Implement the AuthorizationHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre>@<span class="pl-smi">Override</span>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onEMVApplicationSelectionRequested(<span class="pl-smi">ApplicationSelectionCallback</span> callback, <span class="pl-k">ArrayList&lt;<span class="pl-smi">String</span>&gt;</span> applications) {
-    <span class="pl-c">// Ask the payer to select an application from the list, </span>
-    <span class="pl-c">// then execute the callback with the index of the selected application</span>
+    <span class="pl-c"><span class="pl-c">//</span> Ask the payer to select an application from the list, </span>
+    <span class="pl-c"><span class="pl-c">//</span> then execute the callback with the index of the selected application</span>
     callback<span class="pl-k">.</span>useApplicationAtIndex(<span class="pl-c1">0</span>);
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onAuthorizationSuccess(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">AuthorizationInfo</span> authorizationInfo) {
-    <span class="pl-c">// Send the tokenId (authorizationInfo.getTokenId()) and transactionToken (authorizationInfo.getTransactionToken()) to your server</span>
-    <span class="pl-c">// Your server will use these values to make a /checkout/create call to complete the transaction</span>
+    <span class="pl-c"><span class="pl-c">//</span> Send the tokenId (authorizationInfo.getTokenId()) and transactionToken (authorizationInfo.getTransactionToken()) to your server</span>
+    <span class="pl-c"><span class="pl-c">//</span> Your server will use these values to make a /checkout/create call to complete the transaction</span>
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onAuthorizationError(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">Error</span> error) {
-    <span class="pl-c">// handle the error</span>
+    <span class="pl-c"><span class="pl-c">//</span> handle the error</span>
 }</pre></div>
 
 <ul>
 <li>Implement the CardReaderHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre>@<span class="pl-smi">Override</span>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onSuccess(<span class="pl-smi">PaymentInfo</span> paymentInfo) {
-    <span class="pl-c">// use the payment info (for display/recordkeeping)</span>
-    <span class="pl-c">// wait for card tokenization response</span>
+    <span class="pl-c"><span class="pl-c">//</span> use the payment info (for display/recordkeeping)</span>
+    <span class="pl-c"><span class="pl-c">//</span> wait for card tokenization response</span>
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onError(<span class="pl-smi">Error</span> error) {
-    <span class="pl-c">// handle the error</span>
+    <span class="pl-c"><span class="pl-c">//</span> handle the error</span>
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onStatusChange(<span class="pl-smi">CardReaderStatus</span> status) {
     <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>NOT_CONNECTED</span>)) {
-        <span class="pl-c">// show UI that prompts the user to connect the card reader</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Connect card reader and wait<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> show UI that prompts the user to connect the card reader</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Connect card reader and wait<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>WAITING_FOR_CARD</span>)) {
-        <span class="pl-c">// show UI that prompts the user to swipe/dip</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Swipe/Dip card<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> show UI that prompts the user to swipe/dip</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Swipe/Dip card<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>SWIPE_DETECTED</span>)) {
-        <span class="pl-c">// provide feedback to the user that a swipe was detected</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Swipe detected<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> provide feedback to the user that a swipe was detected</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Swipe detected<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>CARD_DIPPED</span>)) {
-        <span class="pl-c">// provide feedback to the user that a dip was detected</span>
-        <span class="pl-c">// also let them know they should not remove the card</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Card dipped, do not remove card<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> provide feedback to the user that a dip was detected</span>
+        <span class="pl-c"><span class="pl-c">//</span> also let them know they should not remove the card</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Card dipped, do not remove card<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>TOKENIZING</span>)) {
-        <span class="pl-c">// provide feedback to the user that the card is being tokenized</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Tokenizing card...<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> provide feedback to the user that the card is being tokenized</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Tokenizing card...<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>AUTHORIZING</span>)) {
-        <span class="pl-c">// provide feedback to the user that the card is being authorized</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Authorizing card...<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> provide feedback to the user that the card is being authorized</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>Authorizing card...<span class="pl-pds">"</span></span>);
     }  <span class="pl-k">else</span> <span class="pl-k">if</span> (status<span class="pl-k">.</span>equals(<span class="pl-smi">CardReaderStatus</span><span class="pl-c1"><span class="pl-k">.</span>STOPPED</span>)) {
-        <span class="pl-c">// provide feedback to the user that the card reader was stopped</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>card reader Stopped<span class="pl-pds">"</span></span>);
+        <span class="pl-c"><span class="pl-c">//</span> provide feedback to the user that the card reader was stopped</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(<span class="pl-s"><span class="pl-pds">"</span>card reader Stopped<span class="pl-pds">"</span></span>);
     } <span class="pl-k">else</span> {
-        <span class="pl-c">// handle all other status change notifications</span>
-        <span class="pl-v">this</span><span class="pl-k">.</span>setStatusText(status<span class="pl-k">.</span>toString());
+        <span class="pl-c"><span class="pl-c">//</span> handle all other status change notifications</span>
+        <span class="pl-c1">this</span><span class="pl-k">.</span>setStatusText(status<span class="pl-k">.</span>toString());
     }
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onReaderResetRequested(<span class="pl-smi">CardReaderResetCallback</span> callback) {
-    <span class="pl-c">// decide if you want to reset the reader, </span>
-    <span class="pl-c">// then execute the callback with the appropriate response</span>
+    <span class="pl-c"><span class="pl-c">//</span> decide if you want to reset the reader, </span>
+    <span class="pl-c"><span class="pl-c">//</span> then execute the callback with the appropriate response</span>
     callback<span class="pl-k">.</span>resetCardReader(<span class="pl-c1">false</span>);
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onTransactionInfoRequested(<span class="pl-smi">CardReaderTransactionInfoCallback</span> callback) {
-    <span class="pl-c">// provide the amount, currency code and WePay account ID of the merchant</span>
-    callback<span class="pl-k">.</span>useTransactionInfo(<span class="pl-c1">21.61</span>, <span class="pl-smi">CurrencyCode</span><span class="pl-c1"><span class="pl-k">.</span>USD</span>, accountId);
+    <span class="pl-c"><span class="pl-c">//</span> provide the amount, currency code and WePay account ID of the merchant</span>
+    callback<span class="pl-k">.</span>useTransactionInfo(<span class="pl-k">new</span> <span class="pl-smi">BigDecimal</span>(<span class="pl-s"><span class="pl-pds">"</span>21.61<span class="pl-pds">"</span></span>), <span class="pl-smi">CurrencyCode</span><span class="pl-c1"><span class="pl-k">.</span>USD</span>, accountId);
 }
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onPayerEmailRequested(<span class="pl-smi">CardReaderEmailCallback</span> callback) {
-    <span class="pl-c">// provide the email address of the payer</span>
+    <span class="pl-c"><span class="pl-c">//</span> provide the email address of the payer</span>
     callback<span class="pl-k">.</span>insertPayerEmail(<span class="pl-s"><span class="pl-pds">"</span>android-example@wepay.com<span class="pl-pds">"</span></span>);
 }</pre></div>
 
@@ -348,24 +352,24 @@ When you are ready, look at the samples below to learn how to interact with the 
 <li>Implement the TokenizationHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre>@<span class="pl-smi">Override</span>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onSuccess(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">PaymentToken</span> token) {
-    <span class="pl-c">// Send the tokenId (paymentToken.getTokenId()) to your server</span>
-    <span class="pl-c">// Your server would use the tokenId to make a /checkout/create call to complete the transaction</span>
+    <span class="pl-c"><span class="pl-c">//</span> Send the tokenId (paymentToken.getTokenId()) to your server</span>
+    <span class="pl-c"><span class="pl-c">//</span> Your server would use the tokenId to make a /checkout/create call to complete the transaction</span>
 }
 
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onError(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">Error</span> error) {
-    <span class="pl-c">// Handle error</span>
+    <span class="pl-c"><span class="pl-c">//</span> Handle error</span>
 }</pre></div>
 
 <ul>
 <li>Make the WePay API call, passing in the instance(s) of the class(es) that implemented the interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre><span class="pl-v">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>startCardReaderForTokenizing(<span class="pl-v">this</span>, <span class="pl-v">this</span>, <span class="pl-v">this</span>);
-<span class="pl-c">// Show UI asking the user to insert the card reader and wait for it to be ready</span></pre></div>
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>startCardReaderForTokenizing(<span class="pl-c1">this</span>, <span class="pl-c1">this</span>, <span class="pl-c1">this</span>);
+<span class="pl-c"><span class="pl-c">//</span> Show UI asking the user to insert the card reader and wait for it to be ready</span></pre></div>
 
 <ul>
 <li>That's it! The following sequence of events will occur:
@@ -431,16 +435,16 @@ When you are ready, look at the samples below to learn how to interact with the 
 <li>Implement the TokenizationHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre>@<span class="pl-smi">Override</span>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onSuccess(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">PaymentToken</span> token) {
-    <span class="pl-c">// Send the tokenId (paymentToken.getTokenId()) to your server</span>
-    <span class="pl-c">// Your server would use the tokenId to make a /checkout/create call to complete the transaction</span>
+    <span class="pl-c"><span class="pl-c">//</span> Send the tokenId (paymentToken.getTokenId()) to your server</span>
+    <span class="pl-c"><span class="pl-c">//</span> Your server would use the tokenId to make a /checkout/create call to complete the transaction</span>
 }
 
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onError(<span class="pl-smi">PaymentInfo</span> paymentInfo, <span class="pl-smi">Error</span> error) {
-    <span class="pl-c">// Handle error</span>
+    <span class="pl-c"><span class="pl-c">//</span> Handle error</span>
 }</pre></div>
 
 <ul>
@@ -462,10 +466,10 @@ address<span class="pl-k">.</span>setCountryCode(<span class="pl-s"><span class=
 <li>Make the WePay API call, passing in the instance of the class that implemented the TokenizationHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre><span class="pl-v">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>tokenize(paymentInfo, <span class="pl-v">this</span>);</pre></div>
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>tokenize(paymentInfo, <span class="pl-c1">this</span>);</pre></div>
 
 <ul>
-<li>Thats it! The following sequence of events will occur:
+<li>That's it! The following sequence of events will occur:
 
 <ol>
 <li>The SDK will send the obtained payment info to WePay's servers for tokenization</li>
@@ -479,7 +483,7 @@ address<span class="pl-k">.</span>setCountryCode(<span class="pl-s"><span class=
 <a id="user-content-integrating-the-store-signature-api" class="anchor" href="#integrating-the-store-signature-api" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Integrating the Store Signature API</h3>
 
 <ul>
-<li>Implement the CheckoutHandler interfaces</li>
+<li>Implement the CheckoutHandler interface</li>
 </ul>
 
 <div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">MainActivity</span> <span class="pl-k">extends</span> <span class="pl-e">ActionBarActivity</span> <span class="pl-k">implements</span> <span class="pl-e">CheckoutHandler</span></pre></div>
@@ -488,22 +492,22 @@ address<span class="pl-k">.</span>setCountryCode(<span class="pl-s"><span class=
 <li>Implement the CheckoutHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre>@<span class="pl-smi">Override</span>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onSuccess(<span class="pl-smi">String</span> signatureUrl, <span class="pl-smi">String</span> checkoutId) {
-    <span class="pl-c">// success! nothing to do here</span>
+    <span class="pl-c"><span class="pl-c">//</span> success! nothing to do here</span>
 }
 
 
-@<span class="pl-smi">Override</span>
+<span class="pl-k">@Override</span>
 <span class="pl-k">public</span> <span class="pl-k">void</span> onError(<span class="pl-smi">Bitmap</span> image, <span class="pl-smi">String</span> checkoutId, <span class="pl-smi">Error</span> error) {
-    <span class="pl-c">// handle the error</span>
+    <span class="pl-c"><span class="pl-c">//</span> handle the error</span>
 }</pre></div>
 
 <ul>
 <li>Obtain the checkout_id associated with this signature from your server</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre><span class="pl-smi">String</span> checkoutId <span class="pl-k">=</span> <span class="pl-v">this</span><span class="pl-k">.</span>obtainCheckoutId();</pre></div>
+<div class="highlight highlight-source-java"><pre><span class="pl-smi">String</span> checkoutId <span class="pl-k">=</span> <span class="pl-c1">this</span><span class="pl-k">.</span>obtainCheckoutId();</pre></div>
 
 <ul>
 <li>Instantiate a Bitmap object containing the user's signature</li>
@@ -515,10 +519,10 @@ address<span class="pl-k">.</span>setCountryCode(<span class="pl-s"><span class=
 <li>Make the WePay API call, passing in the instance of the class that implemented the CheckoutHandler interface methods</li>
 </ul>
 
-<div class="highlight highlight-source-java"><pre><span class="pl-v">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>storeSignatureImage(signature, checkoutId, <span class="pl-v">this</span>);</pre></div>
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>storeSignatureImage(signature, checkoutId, <span class="pl-c1">this</span>);</pre></div>
 
 <ul>
-<li>Thats it! The following sequence of events will occur:
+<li>That's it! The following sequence of events will occur:
 
 <ol>
 <li>The SDK will send the obtained signature to WePay's servers for tokenization</li>
@@ -526,6 +530,149 @@ address<span class="pl-k">.</span>setCountryCode(<span class="pl-s"><span class=
 <li>Otherwise, if the operation fails, CheckoutHandler's <code>onError</code> method will be called with the appropriate error</li>
 </ol>
 </li>
+</ul>
+
+<h3>
+<a id="user-content-integrating-the-calibration-api" class="anchor" href="#integrating-the-calibration-api" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Integrating the Calibration API</h3>
+
+<p>Sometimes, the card reader will not work with Android devices that we have not seen before. It is possible to calibrate the card reader to these new devices so that it starts working. The calibration only needs to be performed once, and only if the card reader is not detected on first use. After successful calibration, the reader can be used on the user's device as usual.</p>
+
+<ul>
+<li>Implement the CalibrationHandler interface</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">MainActivity</span> <span class="pl-k">extends</span> <span class="pl-e">ActionBarActivity</span> <span class="pl-k">implements</span> <span class="pl-e">CalibrationHandler</span></pre></div>
+
+<ul>
+<li>Implement the CalibrationHandler interface methods</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
+<span class="pl-k">public</span> <span class="pl-k">void</span> onProgress(<span class="pl-k">final</span> <span class="pl-k">double</span> progress) {
+    <span class="pl-c"><span class="pl-c">//</span> show progress</span>
+}
+
+
+<span class="pl-k">@Override</span>
+<span class="pl-k">public</span> <span class="pl-k">void</span> onComplete(<span class="pl-k">final</span> <span class="pl-smi">CalibrationResult</span> result, <span class="pl-k">final</span> <span class="pl-smi">CalibrationParameters</span> params) {
+    <span class="pl-c"><span class="pl-c">//</span> show result to the user</span>
+    <span class="pl-c"><span class="pl-c">//</span> send the calibration params to WePay</span>
+}</pre></div>
+
+<ul>
+<li>Make the WePay API call, passing in the instance of the class that implemented the CalibrationHandler interface methods</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>calibrateCardReader(<span class="pl-c1">this</span>);</pre></div>
+
+<ul>
+<li>That's it! The following sequence of events will occur:
+
+<ol>
+<li>The SDK will attempt to calibrate the reader</li>
+<li>CalibrationHandler's <code>onProgress</code> method will be called periodically to indicate the current progress</li>
+<li>When the process is completed, CalibrationHandler's <code>onComplete</code> method will be called with the result</li>
+<li>The card reader must be plugged in before attempting calibration, otherwise the process will fail</li>
+</ol>
+</li>
+</ul>
+
+<p>Note: If calibration succeeds, you must obtain the calibration parameters and email them to <a href="mailto:mobile@wepay.com">mobile@wepay.com</a>. We will bake these parameters into the SDK, so that future users with the same devices will not have to run the calibration process.</p>
+
+<h3>
+<a id="user-content-integrating-the-battery-level-api" class="anchor" href="#integrating-the-battery-level-api" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Integrating the Battery Level API</h3>
+
+<ul>
+<li>Implement the BatteryLevelHandler interface</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">MainActivity</span> <span class="pl-k">extends</span> <span class="pl-e">ActionBarActivity</span> <span class="pl-k">implements</span> <span class="pl-e">BatteryLevelHandler</span></pre></div>
+
+<ul>
+<li>Implement the BatteryLevelHandler interface methods</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">@Override</span>
+<span class="pl-k">public</span> <span class="pl-k">void</span> onBatteryLevel(<span class="pl-k">int</span> batteryLevel) {
+    <span class="pl-c"><span class="pl-c">//</span> show result to the user</span>
+}
+
+<span class="pl-k">@Override</span>
+<span class="pl-k">public</span> <span class="pl-k">void</span> onBatteryLevelError(<span class="pl-smi">Error</span> error) {
+    <span class="pl-c"><span class="pl-c">//</span> handle the error</span>
+}</pre></div>
+
+<ul>
+<li>Make the WePay API call, passing in the instance of the class that implemented the BatteryLevelHandler interface methods</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-c1">this</span><span class="pl-k">.</span>wepay<span class="pl-k">.</span>getCardReaderBatteryLevel(<span class="pl-c1">this</span>);</pre></div>
+
+<ul>
+<li>That's it! The following sequence of events will occur:
+
+<ol>
+<li>The SDK will attempt to read the battery level of the card reader</li>
+<li>If the operation succeeds, BatteryLevelHandler's <code>onBatteryLevel</code> method will be called with the result</li>
+<li>Otherwise, if the operation fails, BatteryLevelHandler's <code>onBatteryLevelError</code> method will be called with the appropriate error</li>
+<li>The card reader must be plugged in before attempting to get battery level, otherwise the process will fail</li>
+</ol>
+</li>
+</ul>
+
+<h3>
+<a id="user-content-testdevelop-using-mock-card-reader-and-mock-wepayclient" class="anchor" href="#testdevelop-using-mock-card-reader-and-mock-wepayclient" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Test/develop using mock card reader and mock WepayClient</h3>
+
+<ul>
+<li>To use mock card reader implementation instead of using the real reader, instantiate a MockConfig object and pass it to Config:</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-smi">MockConfig</span> mockConfig <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-smi">MockConfig</span>()<span class="pl-k">.</span>setUseMockCardReader(<span class="pl-c1">true</span>);
+config<span class="pl-k">.</span>setMockConfig(mockConfig);</pre></div>
+
+<ul>
+<li>To use mock WepayClient implementation instead of interacting with the real WePay server, set the corresponding option on the mockConfig object:</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre>mockConfig<span class="pl-k">.</span>setUseMockWepayClient(<span class="pl-c1">true</span>);</pre></div>
+
+<ul>
+<li>Other options are also available:</li>
+</ul>
+
+<div class="highlight highlight-source-java"><pre>mockConfig<span class="pl-k">.</span>setMockPaymentMethod(<span class="pl-smi">PaymentMethod</span><span class="pl-c1"><span class="pl-k">.</span>SWIPE</span>) <span class="pl-c"><span class="pl-c">//</span> Payment method to mock; Defaults to SWIPE.</span>
+.setCardReadTimeout(<span class="pl-c1">true</span>) <span class="pl-c"><span class="pl-c">//</span> To mock a card reader timeout; Defaults to false.</span>
+.setCardReadFailure(<span class="pl-c1">true</span>) <span class="pl-c"><span class="pl-c">//</span> To mock a failure for card reading; Defaults to false.</span>
+.setCardTokenizationFailure(<span class="pl-c1">true</span>) <span class="pl-c"><span class="pl-c">//</span> To mock a failure for card tokenization; Defaults to false.</span>
+.setEMVAuthFailure(<span class="pl-c1">true</span>) <span class="pl-c"><span class="pl-c">//</span> To mock a failure for EMV authorization; Defaults to false.</span>
+.setMultipleEMVApplication(<span class="pl-c1">true</span>) <span class="pl-c"><span class="pl-c">//</span> To mock multiple EMV applications on card to choose from; Defaults to false.</span>
+.setBatteryLevelError(<span class="pl-c1">true</span>); <span class="pl-c"><span class="pl-c">//</span> To mock an error while fetching battery level; Defaults to false.</span></pre></div>
+
+<h3>
+<a id="user-content-integration-tests-and-unit-tests" class="anchor" href="#integration-tests-and-unit-tests" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Integration tests and unit tests</h3>
+
+<p>All the integration tests and unit tests are located in the <code>src/androidTest/java/</code> directory. The tests are instrumented tests so be sure to have a connected running physical device or emulator before running the tests. </p>
+
+<h5>
+<a id="user-content-from-android-studio" class="anchor" href="#from-android-studio" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>From Android Studio</h5>
+
+<ul>
+<li>To run a single test, right-click the test method and select "Run".</li>
+<li>To run all test methods in a class, right-click the class and select "Run".</li>
+<li>To run all tests in a directory, right-click the directory and select "Run tests".</li>
+</ul>
+
+<h5>
+<a id="user-content-from-the-command-line" class="anchor" href="#from-the-command-line" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>From the command line</h5>
+
+<p>Change to this project's directory and call the connectedAndroidTest (or cAT) task:</p>
+
+<pre><code>./gradlew cAT
+</code></pre>
+
+<ul>
+<li>HTML test result files can be found at: <code>&lt;path_to_your_project&gt;/app/build/reports/androidTests/connected/</code> directory.</li>
+<li>XML test result files: <code>&lt;path_to_your_project&gt;/app/build/outputs/androidTest-results/connected/</code> directory.</li>
 </ul>
 
               </article>
