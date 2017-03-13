@@ -189,7 +189,7 @@ public class MockRoamConfigurationManager implements ConfigurationManager{
 
     @Override
     public Boolean activateDevice(Device device) {
-        return null;
+        return true;
     }
 
     @Override

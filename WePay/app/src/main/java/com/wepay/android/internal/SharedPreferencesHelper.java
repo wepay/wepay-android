@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -13,6 +14,7 @@ public class SharedPreferencesHelper {
     private final static String PREF_KEY_CONFIGURED_DEVICE_SIZE = "PREF_KEY_CONFIGURED_DEVICE_SIZE";
     private final static String PREF_KEY_DEVICE_CONFIG_HASH = "PREF_KEY_DEVICE_CONFIG_HASH_";
     private final static String PREF_KEY_DEVICE_CALIBRATION = "PREF_KEY_DEVICE_CALIBRATION";
+    private static final String PREF_KEY_CARDREADER_ID = "PREF_KEY_CARDREADER_ID";
 
     public static Set<String> getConfiguredDevices(Context context) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
@@ -68,5 +70,25 @@ public class SharedPreferencesHelper {
         return editor.commit();
     }
 
+    public static void rememberCardReader(String identifier, Context context) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = preferences.edit();
 
+        editor.putString(PREF_KEY_CARDREADER_ID, identifier);
+
+        if (!editor.commit()) {
+            Log.e("wepay_sdk", "Unable to write card reader with identifier " + identifier + " to disk.");
+        }
+    }
+
+    public static String getRememberedCardReader(Context context) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        String rememberedCardReader = preferences.getString(PREF_KEY_CARDREADER_ID, null);
+
+        return rememberedCardReader;
+    }
+
+    public static void forgetRememberedCardReader(Context context) {
+        SharedPreferencesHelper.rememberCardReader(null, context);
+    }
 }

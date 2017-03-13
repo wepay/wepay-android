@@ -88,7 +88,7 @@ public class WePay {
      *
      * However, if a general error (errorCategory:ERROR_CATEGORY_CARD_READER, errorCode:CARD_READER_GENERAL_ERROR) occurs while reading, after a few seconds delay, the reader will automatically start waiting again for another 60 seconds. At that time, CardReaderHandler's onStatusChange() method will be called with status = WAITING_FOR_CARD, and the user can try to swipe/dip again. This behavior can be configured with com.wepay.android.models.Config.
      *
-     * WARNING: When this method is called, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use the reader.
+     * WARNING: When this method is called, if the "AUDIOJACK" device is selected via the onCardReaderSelection method in the CardReaderHandler interface, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use a reader.
      *
      * @param cardReaderHandler the card reader handler
      */
@@ -114,7 +114,7 @@ public class WePay {
      *
      * However, if a general error (errorCategory:ERROR_CATEGORY_CARD_READER, errorCode:CARD_READER_GENERAL_ERROR) occurs while reading, after a few seconds delay, the reader will automatically start waiting again for another 60 seconds. At that time, CardReaderHandler's onStatusChange() method will be called with status = WAITING_FOR_CARD, and the user can try to swipe/dip again. This behavior can be configured with com.wepay.android.models.Config.
      *
-     * WARNING: When this method is called, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use the reader.
+     * WARNING: When this method is called, if the "AUDIOJACK" device is selected via the onCardReaderSelection method in the CardReaderHandler interface, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use a reader.
      *
      * @param cardReaderHandler the card reader handler
      * @param tokenizationHandler the tokenization handler
@@ -130,8 +130,8 @@ public class WePay {
     }
 
     /**
-     * Stops the reader. In response, CardReaderHandler's onStatusChange() method will be called with status = STOPPED.
-     * Any tokenization in progress will not be stopped, and its result will be delivered to the TokenizationHandler.
+     * Stops the reader. In response, CardReaderHandler's onStatusChange() method will be called with status = STOPPED. The status can only be returned if you've provided a CardReaderHandler by starting a card reader operation after the WePay object was initialized.
+     * Any operation in progress may not stop, and its result will be delivered to the appropriate handler.
      */
     public void stopCardReader() {
         if (this.isCardReaderAvailable) {
@@ -153,15 +153,15 @@ public class WePay {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
     }
-
     /**
-     * Use this method to get the current battery level of the card reader.
+     * Use this method to get the current battery level of the card reader. If no card reader is currently connected, this method will try to find and connect to one.
      *
+     * @param cardReaderHandler the card reader handler
      * @param batteryLevelHandler the battery level handler
      */
-    public void getCardReaderBatteryLevel(BatteryLevelHandler batteryLevelHandler) {
+    public void getCardReaderBatteryLevel(CardReaderHandler cardReaderHandler, BatteryLevelHandler batteryLevelHandler) {
         if (this.isCardReaderAvailable) {
-            this.cardReaderDirector.getCardReaderBatteryLevel(batteryLevelHandler);
+            this.cardReaderDirector.getCardReaderBatteryLevel(cardReaderHandler, batteryLevelHandler);
         } else {
             Log.e("wepay_sdk", "card reader functionality is not available");
         }
@@ -219,6 +219,22 @@ public class WePay {
      */
     public void storeSignatureImage(final Bitmap image, final String checkoutId, final CheckoutHandler checkoutHandler) {
         this.checkoutHelper.storeSignatureImage(image, checkoutId, checkoutHandler);
+    }
+
+    /**
+     * Use this method to get the name of the most recently used card reader.
+     *
+     * @return the name of the card reader.
+     */
+    public String getRememberedCardReader() {
+        return this.cardReaderDirector.getRememberedCardReader(this.config.getContext());
+    }
+
+    /**
+     * Use this method to clear the name of the most recently used card reader.
+     */
+    public void forgetRememberedCardReader() {
+        this.cardReaderDirector.forgetRememberedCardReader(this.config.getContext());
     }
 
     /** \internal

@@ -80,7 +80,13 @@ public enum ErrorCode {
     INVALID_TRANSACTION_CURRENCY_CODE(10037),
 
     /** The invalid transaction account id error. */
-    INVALID_TRANSACTION_ACCOUNT_ID(10038);
+    INVALID_TRANSACTION_ACCOUNT_ID(10038),
+
+    /** The invalid card reader selection error. */
+    INVALID_CARD_READER_SELECTION(10039),
+
+    /** The card reader battery too low error. */
+    CARD_READER_BATTERY_TOO_LOW(10040);
 
     /** The code. */
     private final int code;
@@ -158,6 +164,10 @@ public enum ErrorCode {
                 return "INVALID_TRANSACTION_CURRENCY_CODE";
             case 10038:
                 return "INVALID_TRANSACTION_ACCOUNT_ID";
+            case 10039:
+                return "INVALID_CARD_READER_SELECTION";
+            case 10040:
+                return "CARD_READER_BATTERY_TOO_LOW";
         default:
             return "UNDEFINED_ERROR";
         }

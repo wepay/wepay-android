@@ -19,13 +19,12 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" >
-            
+
             <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
-		    
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
             <ImageButton
                 android:id="@+id/buttonInfo"
                 android:layout_width="50dp"
@@ -34,12 +33,11 @@
     			android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
         		android:src="@drawable/card_reader_info" />
-            
+
             <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
 		    
             <ImageButton
                 android:id="@+id/buttonTokenize"
@@ -49,13 +47,12 @@
     			android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
         		android:src="@drawable/card_reader_tokenize" />
-            
+
             <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
-		    
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+            
             <ImageButton
                 android:id="@+id/buttonStopCardReader"
                 android:layout_width="50dp"
@@ -64,13 +61,12 @@
     			android:background="@drawable/rounded_transparent_bg"
                 android:scaleType="fitCenter"
                 android:src="@drawable/card_reader_stop" />
-            
+
             <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
-		    
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
             <ImageButton
                 android:id="@+id/buttonManual"
                 android:layout_width="50dp"
@@ -79,30 +75,11 @@
     			android:background="@drawable/rounded_transparent_bg"
                 android:scaleType="fitCenter"
                 android:src="@drawable/manual" />
-            
-            <View
-		        android:layout_width="0dp"
-		        android:layout_height="1dp"
-		        android:layout_weight="1" >
-		    </View>
-            
-        </LinearLayout>
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="5dp"
-            android:layout_weight="1" >
-        </View>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
 
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_weight="1" >
-            </View>
+                android:layout_weight="1"/>
 
             <ImageButton
                 android:id="@+id/buttonCalibrate"
@@ -112,12 +89,22 @@
                 android:scaleType="fitXY"
                 android:background="@drawable/rounded_transparent_bg"
                 android:src="@drawable/card_reader_calibrate" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+            
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp">
 
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_weight="1" >
-            </View>
+                android:layout_weight="1"/>
 
             <ImageButton
                 android:id="@+id/buttonBattery"
@@ -131,8 +118,7 @@
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_weight="1" >
-            </View>
+                android:layout_weight="1"/>
 
             <ImageButton
                 android:id="@+id/buttonSignature"
@@ -146,20 +132,47 @@
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_weight="1" >
-            </View>
+                android:layout_weight="1"/>
 
-            <View
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_weight="0" >
-            </View>
+            <ImageButton
+            android:id="@+id/buttonGetRememberedCardReader"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:padding="2dip"
+            android:scaleType="fitXY"
+            android:background="@drawable/rounded_transparent_bg"
+            android:src="@drawable/get_remembered_reader" />
 
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_weight="1" >
-            </View>
+                android:layout_weight="1"/>
+
+            <ImageButton
+                android:id="@+id/buttonForgetRememberedCardReader"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="2dip"
+                android:scaleType="fitXY"
+                android:background="@drawable/rounded_transparent_bg"
+                android:src="@drawable/forget_remembered_reader" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="2dip"
+                android:scaleType="fitXY"
+                android:background="@android:color/transparent" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
 
         </LinearLayout>
 

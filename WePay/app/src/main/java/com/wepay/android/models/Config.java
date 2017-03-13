@@ -32,8 +32,8 @@ public class Config {
     /** Determines if we should use test EMV cards. Defaults to false.*/
     private boolean useTestEMVCards = false;
 
-    /** Determines if the card reader should automatically stop after a transaction is completed. Defaults to true. */
-    private boolean stopCardReaderAfterTransaction = true;
+    /** Determines if the card reader should automatically stop after an operation is completed. Defaults to true. */
+    private boolean stopCardReaderAfterOperation = true;
 
     /** Determines if the transaction should automatically restart after a successful swipe. Defaults to false. */
     private boolean restartTransactionAfterSuccess = false;
@@ -133,19 +133,19 @@ public class Config {
      *
      * @return true, if the card reader restarts after success
      */
-    public boolean shouldStopCardReaderAfterTransaction() {
-        return this.stopCardReaderAfterTransaction;
+    public boolean shouldStopCardReaderAfterOperation() {
+        return this.stopCardReaderAfterOperation;
     }
 
     /**
-     * Sets the option for the card reader to automatically stop after a transaction.
+     * Sets the option for the card reader to automatically stop after an operation.
      * If not explicitly set to false, defaults to true.
      *
-     * @param stopCardReaderAfterTransaction the flag to determine if the card reader should automatically stop after a transaction.
+     * @param stopCardReaderAfterOperation the flag to determine if the card reader should automatically stop after an operation.
      * @return the config
      */
-    public Config setStopCardReaderAfterTransaction(boolean stopCardReaderAfterTransaction) {
-        this.stopCardReaderAfterTransaction = stopCardReaderAfterTransaction;
+    public Config setStopCardReaderAfterOperation(boolean stopCardReaderAfterOperation) {
+        this.stopCardReaderAfterOperation = stopCardReaderAfterOperation;
         return this;
     }
 

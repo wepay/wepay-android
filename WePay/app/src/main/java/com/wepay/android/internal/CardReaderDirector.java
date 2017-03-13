@@ -1,5 +1,6 @@
 package com.wepay.android.internal;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.wepay.android.AuthorizationHandler;
@@ -23,7 +24,7 @@ public class CardReaderDirector {
     private Config config = null;
     private CardReaderManager cardReaderManager = null;
 
-    public enum CardReaderRequest{CARD_READER_FOR_READING, CARD_READER_FOR_TOKENIZING}
+    public enum CardReaderRequest{CARD_READER_FOR_READING, CARD_READER_FOR_TOKENIZING, CARD_READER_FOR_BATTERY_LEVEL}
     private CardReaderRequest cardReaderRequest = null;
 
     private ExternalCardReaderHelper externalCardReaderHelper = null;
@@ -39,9 +40,9 @@ public class CardReaderDirector {
         this.externalCardReaderHelper.setCardReaderHandler(cardReaderHandler);
         this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_READING;
 
-        if (this.isCardReaderDeviceManagerConnected()) {
+        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
             this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
-            this.cardReaderManager.processCard();
+            this.cardReaderManager.processCardReaderRequest();
         } else {
             instantiateCardReaderInstance();
         }
@@ -55,9 +56,9 @@ public class CardReaderDirector {
         this.sessionId = sessionId;
         this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_TOKENIZING;
 
-        if (this.isCardReaderDeviceManagerConnected()) {
+        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
             this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
-            this.cardReaderManager.processCard();
+            this.cardReaderManager.processCardReaderRequest();
         } else {
             instantiateCardReaderInstance();
         }
@@ -65,7 +66,7 @@ public class CardReaderDirector {
 
     public void stopCardReader()
     {
-        if (!this.isCardReaderDeviceManagerConnected()) {
+        if (!this.isCardReaderDeviceManagerConnected() && !this.isCardReaderDeviceManagerSearching()) {
             Log.d("wepay_sdk", "CRHelper stopCardReader - no card reader connected");
             this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.STOPPED);
         } else {
@@ -81,9 +82,25 @@ public class CardReaderDirector {
         this.cardReaderManager.calibrateDevice(calibrationHandler);
     }
 
-    public void getCardReaderBatteryLevel(BatteryLevelHandler batteryLevelHandler) {
-        BatteryHelper bh = new BatteryHelper();
-        bh.getBatteryLevel(batteryLevelHandler, this.config);
+    public void getCardReaderBatteryLevel(CardReaderHandler cardReaderHandler, BatteryLevelHandler batteryLevelHandler) {
+        this.externalCardReaderHelper.setCardReaderHandler(cardReaderHandler);
+        this.externalCardReaderHelper.setBatteryLevelHandler(batteryLevelHandler);
+        this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_BATTERY_LEVEL;
+
+        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
+            this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
+            this.cardReaderManager.processCardReaderRequest();
+        } else {
+            instantiateCardReaderInstance();
+        }
+    }
+
+    public String getRememberedCardReader(Context context) {
+        return SharedPreferencesHelper.getRememberedCardReader(context);
+    }
+
+    public void forgetRememberedCardReader(Context context) {
+        SharedPreferencesHelper.forgetRememberedCardReader(context);
     }
 
     private void instantiateCardReaderInstance() {
@@ -95,5 +112,9 @@ public class CardReaderDirector {
 
     private Boolean isCardReaderDeviceManagerConnected() {
         return this.cardReaderManager != null && this.cardReaderManager.isConnected();
+    }
+
+    private Boolean isCardReaderDeviceManagerSearching() {
+        return this.cardReaderManager != null && this.cardReaderManager.isSearching();
     }
 }

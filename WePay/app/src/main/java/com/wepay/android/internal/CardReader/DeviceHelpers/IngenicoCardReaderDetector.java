@@ -1,5 +1,7 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
+import android.content.Context;
+import android.media.AudioManager;
 import android.os.Handler;
 import android.util.Log;
 
@@ -10,6 +12,7 @@ import com.roam.roamreaderunifiedapi.callback.SearchListener;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
 import com.roam.roamreaderunifiedapi.data.Device;
+import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.MockConfig;
@@ -18,115 +21,84 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Responsible for automatically determining which Roam DeviceManager is attached.
+ * Responsible for detecting which (if any) Roam Devices are available.
  *
  * Currently supported devices:
  *      - RP350X (headphone jack)
  *      - Moby3000 (Bluetooth)
  *
- * When findFirstAvailableCardReader is called, IngenicoCardReaderDetector tries to both initialize the
- * headphone jack DeviceManager and scan for a Bluetooth device.
- *      - If a supported headphone jack device is plugged in, we pass that DeviceManager up
- *        to the delegate (see onConnected).
- *      - If a supported Bluetooth device is within range and Roam discovers it, we initialize
- *        the Bluetooth DeviceManager (see onDeviceDiscovered). At this point the flow is identical
- *        to the headphone jack flow: after initialization we pass the DeviceManager up to
- *        the delegate (see onConnected).
+ * When findAvailableCardReaders is called, IngenicoCardReaderDetector scans for devices
+ * connected through the headphone jack or available via bluetooth.
+ *      - If any headphone jack device is plugged in, we add it to the list of discovered devices.
+ *      - If any Moby3000 Bluetooth device is within range and discovered, we add it to the list of
+ *        discovered devices.
  *      - If no devices are found in the headphone jack or in Bluetooth scanning range, detection
  *        will time out and the delegate will be notified (see usage of startTimeCounter).
  */
 
-public class IngenicoCardReaderDetector implements DeviceStatusHandler, SearchListener {
+public class IngenicoCardReaderDetector implements SearchListener {
 
-    /** Timeout the search after 8 seconds  */
-    private static final long TIMEOUT_DEVICE_SEARCH_MS = 8000L;
+    /** Timeout the search after 6.5 seconds  */
+    private static final long TIMEOUT_DEVICE_SEARCH_MS = 6500;
+    private static final long TIMEOUT_ROAM_SEARCH_MS = 6000;
 
     private DeviceManager rp350xRoamDeviceManager = null;
     private DeviceManager moby3000RoamDeviceManager = null;
     private MockRoamDeviceManager mockRoamDeviceManager = null;
     private List<DeviceManager> supportedDeviceManagers;
+    private List<Device> discoveredDevices;
 
     private Config config = null;
-    private CalibrationParameters calibrationParameters = null;
     private CardReaderDetectionDelegate delegate = null;
 
     private Handler deviceDetectionTimeoutHandler = new Handler();
 
-    private Boolean isDeviceDiscovered = false;
+    private int completedDiscoveries = 0;
 
     public IngenicoCardReaderDetector() {
         this.rp350xRoamDeviceManager = RoamReaderUnifiedAPI.getDeviceManager(DeviceType.RP350x);
         this.moby3000RoamDeviceManager = RoamReaderUnifiedAPI.getDeviceManager(DeviceType.MOBY3000);
         this.mockRoamDeviceManager = MockRoamDeviceManager.getDeviceManager();
 
-        this.supportedDeviceManagers = new ArrayList<>(3);
-        this.supportedDeviceManagers.add(this.rp350xRoamDeviceManager);
-        this.supportedDeviceManagers.add(this.moby3000RoamDeviceManager);
-        this.supportedDeviceManagers.add(this.mockRoamDeviceManager);
+        this.discoveredDevices = new ArrayList<>();
+        this.supportedDeviceManagers = new ArrayList<>();
     }
 
-    public void findFirstAvailableCardReader(Config config, CalibrationParameters calibrationParameters, CardReaderDetectionDelegate detectionDelegate) {
+    public void findAvailableCardReaders(Config config, CardReaderDetectionDelegate detectionDelegate) {
+        Log.d("wepay_sdk", "findAvailableCardReaders");
         MockConfig mockConfig = config.getMockConfig();
 
         this.config = config;
-        this.calibrationParameters = calibrationParameters;
         this.delegate = detectionDelegate;
 
         if (mockConfig != null && mockConfig.isUseMockCardReader()) {
-            this.findFirstAvailableDeviceMock(mockConfig);
+            this.mockRoamDeviceManager.setMockConfig(mockConfig);
+            this.supportedDeviceManagers.add(this.mockRoamDeviceManager);
         } else {
-            this.findFirstAvailableDeviceInternal(config, detectionDelegate);
+            this.supportedDeviceManagers.add(this.rp350xRoamDeviceManager);
+            this.supportedDeviceManagers.add(this.moby3000RoamDeviceManager);
         }
+
+        this.beginDetection();
     }
 
-    private void findFirstAvailableDeviceInternal(Config config,
-                                                  CardReaderDetectionDelegate detectionDelegate) {
-        DeviceManager existingDeviceManager = getReadyDeviceManager(this.supportedDeviceManagers);
-
+    public void stopFindingCardReaders() {
+        Log.d("wepay_sdk", "stopFindingCardReaders");
+        this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
         this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
-
-        if (existingDeviceManager == null) {
-            this.initializeDeviceManager(this.rp350xRoamDeviceManager);
-            this.moby3000RoamDeviceManager.searchDevices(config.getContext(), false, TIMEOUT_DEVICE_SEARCH_MS, this);
-
-            stopTimeCounter(this.deviceDetectionTimeoutHandler);
-            startTimeCounter(this.deviceDetectionTimeoutHandler, TIMEOUT_DEVICE_SEARCH_MS);
-        } else {
-            // We already have an existing DeviceManager that's ready to go, so pass that to the delegate.
-            detectionDelegate.onCardReaderManagerDetected(existingDeviceManager);
-        }
+        completedDiscoveries = 0;
+        this.discoveredDevices.clear();
     }
 
-    private void findFirstAvailableDeviceMock(MockConfig mockConfig) {
-        this.mockRoamDeviceManager.setMockConfig(mockConfig);
-        this.initializeDeviceManager(this.mockRoamDeviceManager);
-    }
+    private void beginDetection() {
+        completedDiscoveries = 0;
 
-    private void initializeDeviceManager(DeviceManager deviceManager) {
-        final DeviceStatusHandler statusHandler = this;
-
-        if (this.calibrationParameters != null) {
-            deviceManager.initialize(this.config.getContext(), statusHandler, this.calibrationParameters);
-        } else {
-            deviceManager.initialize(this.config.getContext(), statusHandler);
-        }
-    }
-
-    private DeviceManager getReadyDeviceManager(List<DeviceManager> possibleDeviceManagers) {
-        DeviceManager result = null;
-
-        for (DeviceManager deviceManager : possibleDeviceManagers) {
-            if (deviceManager.isReady()) {
-                result = deviceManager;
-                break;
-            }
+        for (DeviceManager manager : this.supportedDeviceManagers) {
+            manager.searchDevices(this.config.getContext(), false, TIMEOUT_ROAM_SEARCH_MS, this);
         }
 
-        return result;
-    }
-
-    private Boolean isAnyDeviceManagerReady() {
-        return getReadyDeviceManager(this.supportedDeviceManagers) != null;
+        stopTimeCounter(this.deviceDetectionTimeoutHandler);
+        startTimeCounter(this.deviceDetectionTimeoutHandler, TIMEOUT_DEVICE_SEARCH_MS);
     }
 
     private void cancelAllDeviceManagerSearches(List<DeviceManager> possibleDeviceManagers) {
@@ -140,8 +112,7 @@ public class IngenicoCardReaderDetector implements DeviceStatusHandler, SearchLi
         Runnable counterRunnable = new Runnable() {
             @Override
             public void run() {
-                delegate.onCardReaderDetectionTimeout();
-                cancelAllDeviceManagerSearches(supportedDeviceManagers);
+                discoveryComplete();
             }
         };
 
@@ -152,73 +123,86 @@ public class IngenicoCardReaderDetector implements DeviceStatusHandler, SearchLi
         counterHandler.removeCallbacksAndMessages(null);
     }
 
-    /** DeviceStatusHandler */
+    private void discoveryComplete() {
+        Log.d("wepay_sdk", "discoveryComplete");
+        this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
+        this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
 
-    @Override
-    public void onConnected() {
-        // This callback will be invoked once Roam considers some device to be considered connected.
-        Log.d("wepay_sdk", "detector connected a device");
-
-        DeviceManager foundDeviceManager = getReadyDeviceManager(this.supportedDeviceManagers);
-
-        if (foundDeviceManager == null) {
-            // This should never happen unless we invoke initialize() on a Roam device manager of an
-            // unsupported type.
-            Log.e("wepay_sdk", "unknown card reader device connected");
-        } else {
-            this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
-            this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
-            this.delegate.onCardReaderManagerDetected(foundDeviceManager);
+        if (this.discoveredDevices.size() > 0) {
+            // Make a copy to give to the delegate so we can clear the list safely
+            List<Device> list = new ArrayList<>(this.discoveredDevices);
+            this.delegate.onCardReaderDevicesDetected(list);
+            this.discoveredDevices.clear();
+        }
+        else {
+            this.beginDetection();
         }
     }
 
-    @Override
-    public void onDisconnected() {
-        Log.e("wepay_sdk", "device detection: onDisconnected");
+    /**
+     * Returns whether or not something is plugged into the Audio Jack of the device. If
+     * provided a mock config using a mock card reader, returns isMockCardReaderDetected().
+     *
+     * This uses a deprecated AudioManager function `isWiredHeadsetOn()`. If the function is
+     * not available, we catch the exception and just return true.
+     *
+     * @param cfg the Config to use
+     * @return true if audio jack plugged in or mocked, false otherwise
+     */
+    @SuppressWarnings("deprecation")
+    private boolean isAudioJackPluggedIn(Config cfg) {
+        if (cfg != null
+                && cfg.getMockConfig() != null
+                && cfg.getMockConfig().isUseMockCardReader()) {
+            return cfg.getMockConfig().isMockCardReaderDetected();
+        }
+
+        try {
+            AudioManager manager = ((AudioManager)(cfg.getContext().getSystemService(Context.AUDIO_SERVICE)));
+            return manager.isWiredHeadsetOn();
+        } catch (Exception e) {
+            return true;
+        }
     }
-
-    @Override
-    public void onError(String message) {
-        Log.e("wepay_sdk", "device detection: encountered roam error: " + message);
-
-        this.delegate.onCardReaderDetectionFailed("Error initializing device. " + message);
-    }
-
 
     /** SearchListener */
 
     @Override
     public void onDeviceDiscovered(Device device) {
-        Log.d("wepay_sdk", "onDeviceDiscovered " + device.getDeviceType().toString());
+        Log.d("wepay_sdk", "onDeviceDiscovered " + device.getName());
 
-        String name = device == null ? null : device.getName();
-        Boolean isMoby = name == null ? false : name.startsWith("MOB30");
+        // Maintain a list of all discovered devices that have the name AUDIOJACK or MOB30*
+        String name = device.getName();
+        Boolean isMoby = name != null && name.startsWith("MOB30");
+        Boolean isAudioJack = name != null && (name.equals("AUDIOJACK") || name.startsWith("RP350"));
+        String rememberedName = SharedPreferencesHelper.getRememberedCardReader(this.config.getContext());
 
-        if (isMoby && !this.moby3000RoamDeviceManager.isReady()) {
-            Log.d("wepay_sdk", "initializing discovered device");
+        // In Android only, we need to do a manual check that the audio jack is plugged in.
+        // Roam "discovers" RP350x even when nothing is plugged in. We don't want to surface that
+        // unless something is actually plugged in.
+        if (isMoby || (isAudioJack && isAudioJackPluggedIn(this.config))) {
+            this.discoveredDevices.add(device);
 
-            this.isDeviceDiscovered = true;
-            this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
-            this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
+            if (name.equals(rememberedName)) {
+                // Stop searching for a device if we've found the card reader we remember.
+                Log.d("wepay_sdk", "onDeviceDiscovered: discovered remembered reader " + name);
 
-            this.moby3000RoamDeviceManager.getConfigurationManager().activateDevice(device);
-
-            initializeDeviceManager(this.moby3000RoamDeviceManager);
+                this.discoveryComplete();
+            }
         }
     }
 
     @Override
     public void onDiscoveryComplete() {
-        Log.d("wepay_sdk", "onDiscoveryComplete");
+        completedDiscoveries++;
+        Log.d("wepay_sdk", "onDiscoveryComplete [" + completedDiscoveries + "]");
 
-        if (!this.isDeviceDiscovered && !isAnyDeviceManagerReady()) {
-            this.delegate.onCardReaderDetectionFailed("Unable to find any supported Bluetooth devices");
+        if (completedDiscoveries >= this.supportedDeviceManagers.size()) {
+            this.discoveryComplete();
         }
     }
 
     public interface CardReaderDetectionDelegate {
-        void onCardReaderManagerDetected(DeviceManager roamDeviceManager);
-        void onCardReaderDetectionTimeout();
-        void onCardReaderDetectionFailed(String message);
+        void onCardReaderDevicesDetected(List<Device> devices);
     }
 }

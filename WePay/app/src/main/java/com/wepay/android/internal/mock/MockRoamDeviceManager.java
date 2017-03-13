@@ -17,11 +17,13 @@ import com.roam.roamreaderunifiedapi.constants.CalibrationResult;
 import com.roam.roamreaderunifiedapi.constants.Command;
 import com.roam.roamreaderunifiedapi.constants.DeviceStatus;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
+import com.roam.roamreaderunifiedapi.constants.ErrorCode;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.roam.roamreaderunifiedapi.constants.CommunicationType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
 import com.roam.roamreaderunifiedapi.callback.ReleaseHandler;
+import com.roam.roamreaderunifiedapi.data.Device;
 import com.wepay.android.models.MockConfig;
 
 import java.util.HashMap;
@@ -32,18 +34,29 @@ public class MockRoamDeviceManager implements DeviceManager{
     private static MockRoamConfigurationManager configurationManager;
     private static MockRoamTransactionManager transactionManager;
     private static final long READER_CONNECTION_TIME_MS = 200;
+    private static final long READER_DISCOVERED_TIME_MS = 500;
+    private static final long READER_RELEASE_TIME_MS = 1000;
+    private static final long DISCOVERY_COMPLETE_TIME_MS = 1000;
+    private static final String MOCK_DEVICE_NAME = "AUDIOJACK";
+    private static final String MOCK_DEVICE_IDENTIFIER = "RP350MOCK";
+
     private Context context;
     private MockConfig mockConfig;
     private DeviceStatusHandler deviceStatusHandler;
     private boolean isReady = false;
     private static Handler mainThreadHandler = new Handler(Looper.getMainLooper());
+    private Runnable discoveredDeviceRunnable = null;
+    private Runnable discoveryCompleteRunnable = null;
 
     private void runOnMainThread(Runnable runnable, long delayMillis) {
         mainThreadHandler.postDelayed(runnable, delayMillis);
     }
 
     public static MockRoamDeviceManager getDeviceManager() {
-        return new MockRoamDeviceManager();
+        if (deviceManager == null) {
+            deviceManager = new MockRoamDeviceManager();
+        }
+        return deviceManager;
     }
 
     public void setMockConfig(MockConfig mockConfig) {
@@ -120,14 +133,14 @@ public class MockRoamDeviceManager implements DeviceManager{
                 public void run() {
                     deviceStatusHandler.onDisconnected();
                 }
-            }, 0);
+            }, READER_RELEASE_TIME_MS);
         }
         return true;
     }
 
     @Override
     public void release(ReleaseHandler releaseHandler) {
-
+        this.release();
     }
 
     @Override
@@ -147,12 +160,32 @@ public class MockRoamDeviceManager implements DeviceManager{
 
     @Override
     public void searchDevices(Context ctx, Boolean includeBondedDevices, SearchListener searchListener) {
-
+        this.searchDevices(ctx, includeBondedDevices, DISCOVERY_COMPLETE_TIME_MS, searchListener);
     }
 
     @Override
-    public void searchDevices(Context ctx, Boolean includeBondedDevices, Long durationInMilliseconds, SearchListener searchListener) {
+    public void searchDevices(Context ctx, Boolean includeBondedDevices, Long durationInMilliseconds, final SearchListener searchListener) {
+        // Bypassing durationInMilliseconds so that the mock experience is quicker.
 
+        // In Android, we will always return that this mock device was discovered because Roam
+        // always "discovers" RP350x devices.
+        discoveredDeviceRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Device device = new Device(DeviceType.RP350x, CommunicationType.AudioJack, MOCK_DEVICE_NAME, MOCK_DEVICE_IDENTIFIER);
+                searchListener.onDeviceDiscovered(device);
+            }
+        };
+
+        discoveryCompleteRunnable = new Runnable() {
+            @Override
+            public void run() {
+                searchListener.onDiscoveryComplete();
+            }
+        };
+
+        this.runOnMainThread(discoveredDeviceRunnable, READER_DISCOVERED_TIME_MS);
+        this.runOnMainThread(discoveryCompleteRunnable, DISCOVERY_COMPLETE_TIME_MS);
     }
 
     @Deprecated
@@ -163,7 +196,8 @@ public class MockRoamDeviceManager implements DeviceManager{
 
     @Override
     public void cancelSearch() {
-
+        mainThreadHandler.removeCallbacks(discoveredDeviceRunnable);
+        mainThreadHandler.removeCallbacks(discoveryCompleteRunnable);
     }
 
     @Override
@@ -192,7 +226,13 @@ public class MockRoamDeviceManager implements DeviceManager{
             runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
-                    deviceStatusHandler.onError("mock error");
+
+                    final Map<Parameter, Object> res = new HashMap<>();
+                    res.put(Parameter.Command, Command.BatteryInfo);
+                    res.put(Parameter.ResponseCode, ResponseCode.Error);
+                    res.put(Parameter.ErrorCode, ErrorCode.UnknownError);
+
+                    deviceResponseHandler.onResponse(res);
                 }
             }, READER_CONNECTION_TIME_MS);
         } else {

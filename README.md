@@ -92,6 +92,8 @@ Detailed reference documentation is available on the reference page for the Wepa
 The SDK uses interfaces to repond to API calls. You will implement the relevant interfaces to receive responses to the API calls you make.
 Detailed reference documentation is available on the reference page for each interface:
 - com.wepay.android.AuthorizationHandler
+- com.wepay.android.BatteryLevelHandler
+- com.wepay.android.CalibrationHandler
 - com.wepay.android.CardReaderHandler
 - com.wepay.android.CheckoutHandler
 - com.wepay.android.TokenizationHandler
@@ -237,6 +239,14 @@ public void onPayerEmailRequested(CardReaderEmailCallback callback) {
     // provide the email address of the payer
     callback.insertPayerEmail("android-example@wepay.com");
 }
+
+@Override
+public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> cardReaderNames) {
+    // In production apps, the merchant must choose the card reader they want to use.
+    // Here, we always select the first card reader in the array
+    int selectedIndex = 0;
+    callback.useCardReaderAtIndex(selectedIndex);
+}
 ~~~
 + Implement the TokenizationHandler interface methods
 ~~~{.java}
@@ -258,10 +268,13 @@ this.wepay.startCardReaderForTokenizing(this, this, this);
 // Show UI asking the user to insert the card reader and wait for it to be ready
 ~~~
 + That's it! The following sequence of events will occur:
-    1. The user inserts the card reader (or it is already inserted)
+    1. The user inserts the card reader (or it is already inserted), or powers on their bluetooth card reader.
     2. The SDK tries to detect the card reader and initialize it.
-        - If the card reader is not detected, the `onStatusChange` method will be called with `status = NOT_CONNECTED`
-        - If the card reader is successfully detected, then the `onStatusChange` method will be called with `status = CONNECTED`.
+        - The the `onStatusChange` method will be called with `status = SEARCHING_FOR_READER`
+        - If any card readers are discovered, the `onCardReaderSelection` method will be called with a list of discovered devices. If anything is plugged into the headphone jack, `"AUDIOJACK"` will be one of the devices discovered.
+        - If no card readers are detected, the `onStatusChange` method will be called with `status = NOT_CONNECTED`
+        - Once `callback.useCardReaderAtIndex()` is called, the SDK will attempt to to connect to the selected card reader.
+        - If the card reader is successfully connected, then the `onStatusChange` method will be called with `status = CONNECTED`.
     3. Next, the SDK checks if the card reader is correctly configured (the `onStatusChange` method will be called with `status = CHECKING_READER`).
         - If the card reader is already configured, the App is given a chance to force configuration. The SDK calls the `onReaderResetRequested` method, and the app must execute the callback method, telling the SDK whether or not the reader should be reset.
         - If the reader was not configured, or the app requested a reset, the card reader is configured (the `onStatusChange` method will be called with `status = CONFIGURING_READER`)
@@ -424,6 +437,10 @@ this.wepay.getCardReaderBatteryLevel(this);
     3. Otherwise, if the operation fails, BatteryLevelHandler's `onBatteryLevelError` method will be called with the appropriate error
     4. The card reader must be plugged in before attempting to get battery level, otherwise the process will fail
 
+### Configuring the SDK
+
+The experiences described above can be modified by utilizing the configuration options available on the Config object. Detailed descriptions for each configurable property is available in the documentation for Config.
+
 ### Test/develop using mock card reader and mock WepayClient
 
 + To use mock card reader implementation instead of using the real reader, instantiate a MockConfig object and pass it to Config:
@@ -444,6 +461,7 @@ mockConfig.setMockPaymentMethod(PaymentMethod.SWIPE) // Payment method to mock; 
 .setEMVAuthFailure(true) // To mock a failure for EMV authorization; Defaults to false.
 .setMultipleEMVApplication(true) // To mock multiple EMV applications on card to choose from; Defaults to false.
 .setBatteryLevelError(true); // To mock an error while fetching battery level; Defaults to false.
+.setMockCardReaderDetected(false); // To mock a card reader being available for connection; Defaults to true.
 ~~~
 
 ### Integration tests and unit tests

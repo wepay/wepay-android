@@ -9,7 +9,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
-// TODO: Rename to UnitTestTransactionUtilities
 public class UnitTestTransactionUtilities {
 
     @Test

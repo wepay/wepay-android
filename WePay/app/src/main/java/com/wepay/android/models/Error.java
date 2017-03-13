@@ -3,7 +3,10 @@
  */
 package com.wepay.android.models;
 
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.enums.ErrorCode;
 
@@ -155,7 +158,19 @@ public class Error extends Exception {
         errorMap.put("errorDescription", this.errorDescription);
         errorMap.put("innerException", this.innerException);
 
-        return new Gson().toJson(errorMap, LinkedHashMap.class);
+        GsonBuilder builder = new GsonBuilder();
+        builder.setExclusionStrategies(new ExclusionStrategy() {
+            @Override
+            public boolean shouldSkipField(FieldAttributes f) {
+                return (f.getDeclaredClass() == Throwable.class && f.getName().equals("cause"));
+            }
+
+            @Override
+            public boolean shouldSkipClass(Class<?> clazz) {
+                return false;
+            }
+        });
+        return builder.create().toJson(errorMap, LinkedHashMap.class);
     }
 
     /** \internal
@@ -386,6 +401,24 @@ public class Error extends Exception {
      */
     public static Error getNameNotFoundError() {
         return new Error(ErrorCode.NAME_NOT_FOUND_ERROR.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "Name not found.");
+    }
+
+    /** \internal
+     * Instantiates a card reader selection error.
+     *
+     * @return the card reader selection error
+     */
+    public static Error getInvalidCardReaderSelectionError() {
+        return new Error(ErrorCode.INVALID_CARD_READER_SELECTION.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "Card reader selection is invalid.");
+    }
+
+    /** \internal
+     * Instantiates a card reader battery too low error.
+     *
+     * @return the card reader battery too low error
+     */
+    public static Error getCardReaderBatteryTooLowError() {
+        return new Error(ErrorCode.CARD_READER_BATTERY_TOO_LOW.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "The card reader battery does not have enough charge. Please charge before using.");
     }
 
     public static Error getErrorWithCardReaderResponseData(Map<Parameter, Object> data) {

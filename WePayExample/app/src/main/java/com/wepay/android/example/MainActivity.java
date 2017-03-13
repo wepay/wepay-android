@@ -2,6 +2,7 @@ package com.wepay.android.example;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -14,13 +15,18 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AlertDialog;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.wepay.android.AuthorizationHandler;
@@ -55,6 +61,10 @@ import java.util.Map;
  */
 public class MainActivity extends ActionBarActivity implements CardReaderHandler, TokenizationHandler, AuthorizationHandler, CheckoutHandler, CalibrationHandler, BatteryLevelHandler, OnClickListener {
 
+    ListView list;
+    ArrayAdapter<String> listAdapter;
+    AlertDialog deviceSelectionDialog;
+
     TextView tvStatus, tvConsole;
 
     WePay wepay;
@@ -70,6 +80,8 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     String environment;
 
     long accountId;
+
+    boolean cardReaderStarted;
 
     BigDecimal amount = new BigDecimal("22.61"); // magic success amount
 
@@ -111,7 +123,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole("accountId: " + String.format("%d", accountId));
 
         // Initialize and configure the wepay object with current settings
-        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true).setStopCardReaderAfterTransaction(false);
+        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true).setStopCardReaderAfterOperation(false);
         this.wepay = new WePay(config);
     }
 
@@ -141,28 +153,15 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         tvConsole = (TextView) findViewById(R.id.consoleView);
         tvConsole.setMovementMethod(new ScrollingMovementMethod());
 
-        ((ImageButton) findViewById(R.id.buttonManual)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonInfo)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonTokenize)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonStopCardReader)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonCalibrate)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonBattery)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonSignature)).setOnClickListener(this);
-
-    }
-
-    /**
-     * AuthorizationHandler - onEMVApplicationSelectionRequested
-     */
-    @Override
-    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
-        int selectedIndex = 0;
-
-        this.writeToConsole("\nPerforming application selection:\n");
-        this.writeToConsole(applications.toString());
-        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
-
-        callback.useApplicationAtIndex(selectedIndex);
+        findViewById(R.id.buttonManual).setOnClickListener(this);
+        findViewById(R.id.buttonInfo).setOnClickListener(this);
+        findViewById(R.id.buttonTokenize).setOnClickListener(this);
+        findViewById(R.id.buttonStopCardReader).setOnClickListener(this);
+        findViewById(R.id.buttonCalibrate).setOnClickListener(this);
+        findViewById(R.id.buttonBattery).setOnClickListener(this);
+        findViewById(R.id.buttonSignature).setOnClickListener(this);
+        findViewById(R.id.buttonGetRememberedCardReader).setOnClickListener(this);
+        findViewById(R.id.buttonForgetRememberedCardReader).setOnClickListener(this);
     }
 
     /**
@@ -184,6 +183,20 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole("\nAuthorization failed! error:");
         this.writeToConsole(error.toString());
         this.setStatusText("Authorization failed!");
+    }
+
+    /**
+     * CardReaderHandler - onEMVApplicationSelectionRequested
+     */
+    @Override
+    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
+        int selectedIndex = 0;
+
+        this.writeToConsole("\nPerforming application selection:\n");
+        this.writeToConsole(applications.toString());
+        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
+
+        callback.useApplicationAtIndex(selectedIndex);
     }
 
     /**
@@ -260,6 +273,35 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     @Override
     public void onPayerEmailRequested(CardReaderEmailCallback callback) {
         callback.insertPayerEmail("android-example@wepay.com");
+    }
+
+    @Override
+    public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> devices) {
+        LayoutInflater inflater = this.getLayoutInflater();
+        View view = inflater.inflate(R.layout.fragment_available_readers, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(view);
+        builder.setTitle("Discovered devices:");
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                callback.useCardReaderAtIndex(-1);
+            }
+        });
+        list = (ListView) view.findViewById(R.id.available_readers_list);
+        listAdapter = new ArrayAdapter<>(this, R.layout.device_name);
+        list.setAdapter(listAdapter);
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                callback.useCardReaderAtIndex(position);
+                deviceSelectionDialog.dismiss();
+
+            }
+        });
+        listAdapter.addAll(devices);
+        deviceSelectionDialog = builder.create();
+        deviceSelectionDialog.show();
     }
 
     /**
@@ -362,11 +404,13 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.writeToConsole("Initializing Card Reader for Tokenizing");
             this.setStatusText("Initializing Card Reader");
             this.wepay.startTransactionForTokenizing(this, this, this);
+            this.cardReaderStarted = true;
         } else if (btn.getId() == R.id.buttonInfo) {
             this.resetConsole();
             this.writeToConsole("Initializing Card Reader for Info");
             this.setStatusText("Initializing Card Reader");
             this.wepay.startTransactionForReading(this);
+            this.cardReaderStarted = true;
         } else if (btn.getId() == R.id.buttonManual) {
             this.resetConsole();
 
@@ -406,7 +450,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.writeToConsole("Stop Card Reader selected");
 
             // Change status label
-            this.setStatusText("Stopping Card Reader...");
+            this.setStatusText(this.cardReaderStarted ? "Stopping Card Reader..." : "Card reader not started");
 
             // Make WePay API call
             this.wepay.stopCardReader();
@@ -429,7 +473,23 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.setStatusText("Getting Battery Level...");
 
             // Make WePay API call
-            this.wepay.getCardReaderBatteryLevel(this);
+            this.wepay.getCardReaderBatteryLevel(this, this);
+            this.cardReaderStarted = true;
+        } else if (btn.getId() == R.id.buttonGetRememberedCardReader) {
+            String cardReader = wepay.getRememberedCardReader();
+            String rememberedCardReaderMessage = "No remembered card reader exists";
+
+            this.setStatusText("Getting remembered card reader");
+
+            if (cardReader != null) {
+                rememberedCardReaderMessage = "Remembered card reader is " + cardReader;
+            }
+
+            this.writeToConsole(rememberedCardReaderMessage);
+        } else if (btn.getId() == R.id.buttonForgetRememberedCardReader) {
+            this.setStatusText("Forgetting remembered card reader");
+            this.wepay.forgetRememberedCardReader();
+            this.writeToConsole("Forgot the remembered card reader");
         }
     }
 

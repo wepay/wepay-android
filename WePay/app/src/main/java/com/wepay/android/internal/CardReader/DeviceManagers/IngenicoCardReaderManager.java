@@ -4,15 +4,20 @@ import android.os.Handler;
 import android.util.Log;
 
 import com.roam.roamreaderunifiedapi.DeviceManager;
+import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
 import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
 import com.roam.roamreaderunifiedapi.constants.Command;
+import com.roam.roamreaderunifiedapi.constants.DeviceType;
+import com.roam.roamreaderunifiedapi.constants.ErrorCode;
 import com.roam.roamreaderunifiedapi.constants.LanguageCode;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ProgressMessage;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.roam.roamreaderunifiedapi.constants.ResponseType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
+import com.roam.roamreaderunifiedapi.data.Device;
+import com.roam.roamreaderunifiedapi.emvreaders.MOBY3000DeviceManager;
 import com.wepay.android.CalibrationHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.enums.CardReaderStatus;
@@ -25,12 +30,15 @@ import com.wepay.android.internal.CardReader.DeviceHelpers.ExternalCardReaderHel
 import com.wepay.android.internal.CardReader.DeviceHelpers.TransactionDelegate;
 import com.wepay.android.internal.CardReaderDirector.CardReaderRequest;
 import com.wepay.android.internal.SharedPreferencesHelper;
+import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,14 +63,23 @@ public class IngenicoCardReaderManager implements CardReaderManager,
     private static final CurrencyCode READ_CURRENCY = CurrencyCode.USD;
     private static final int READ_ACCOUNT_ID = 12345;
 
-    /** The reader should wait for card. */
-    private boolean readerShouldWaitForCard;
+    /** The maximum number of times we'll attempt to get the card reader device's serial number */
+    private static final int MAX_TRIES_FETCH_DEVICE_SERIAL_NUMBER = 3;
+
+    /** The reader should perform card reader request operation. */
+    private boolean readerShouldPerformOperation;
 
     /** The reader is waiting for card. */
     private boolean readerIsWaitingForCard;
 
     /** The reader is connected. */
     private boolean isConnected;
+
+    /** The manager is searching for a reader. */
+    private boolean isSearching;
+
+    /** The stop command was issued. */
+    private boolean isCardReaderStopped;
 
     /** The config. */
     private Config config = null;
@@ -94,27 +111,41 @@ public class IngenicoCardReaderManager implements CardReaderManager,
     /** The reader inform not connected timer. */
     private Handler readerInformNotConnectedHandler = new Handler();
 
+    /** The battery info command timer. */
+    private Handler delayedOperationHandler = new Handler();
+
+    /** The find card reader timer. */
+    private Handler findReaderHandler = new Handler();
+
     /** The reader charge up runnable. */
     private Runnable readerChargeUpRunnable = null;
 
     /** The reader inform not connected runnable. */
     private Runnable readerInformNotConnectedRunnable = null;
 
+    /** The reader inform not connected runnable. */
+    private Runnable delayedOperationRunnable = null;
+
+    /** The find reader runnable. */
+    private Runnable findReaderRunnable = null;
+
+    /** The discovered readers as provided in onCardReaderDevicesDetected(). */
+    private List<Device> discoveredCardReaders = null;
+
     private CalibrationHelper calibrationHelper = new CalibrationHelper();
+
+    private IngenicoCardReaderDetector detector = null;
+
+    /** The name of the device that was successfully connected to */
+    private String connectedDeviceName = null;
+
+    /** How many attempts we've made to fetch the card reader device's serial number */
+    private int deviceSerialNumberFetchCount = 0;
 
     public static IngenicoCardReaderManager instantiate(Config config,
                                                         ExternalCardReaderHelper externalCardReaderHelper) {
-        IngenicoCardReaderManager instance;
 
-        IngenicoCardReaderDetector detector = new IngenicoCardReaderDetector();
-        CalibrationParameters params;
-
-        instance = new IngenicoCardReaderManager(config, externalCardReaderHelper);
-        params = instance.calibrationHelper.getCalibrationParams(config);
-
-        detector.findFirstAvailableCardReader(config, params, instance);
-
-        return instance;
+        return new IngenicoCardReaderManager(config, externalCardReaderHelper);
     }
 
     private IngenicoCardReaderManager(Config config,
@@ -134,24 +165,41 @@ public class IngenicoCardReaderManager implements CardReaderManager,
     /** CardReaderManager */
 
     @Override
-    public void processCard() {
-        Log.d("wepay_sdk", "processCard");
+    public void processCardReaderRequest() {
+        Log.d("wepay_sdk", "processCardReaderRequest");
+
+        this.stopFindingCardReaders();
         this.stopWaitingForCard();
-        this.readerShouldWaitForCard = true;
-        this.checkAndWaitForEMVCard();
+        this.stopPendingOperations();
+        this.readerShouldPerformOperation = true;
+		this.isCardReaderStopped = false;
+		this.connectedDeviceName = null;
+		this.deviceSerialNumberFetchCount = 0;
+        if (this.requestType == CardReaderRequest.CARD_READER_FOR_BATTERY_LEVEL) {
+            this.checkAndWaitForBatteryLevel();
+        } else {
+            this.checkAndWaitForEMVCard();
+        }
     }
 
     @Override
     public void startCardReader() {
+        this.readerShouldPerformOperation = true;
+        this.isCardReaderStopped = false;
         this.startWaitingForReader();
-
-        // devices are only started for transactions, so we should wait for card
-        this.readerShouldWaitForCard = true;
+        if (this.isSearching) {
+            this.stopFindingCardReaders();
+            this.findCardReadersAfterDelay(1000);
+        } else {
+            this.findCardReaders();
+        }
     }
 
     @Override
     public void stopCardReader() {
-        endTransaction();
+        this.isCardReaderStopped = true;
+        endOperation();
+        stopFindingCardReaders();
 
         // inform external
         externalCardReaderHelper.informExternalCardReader(CardReaderStatus.STOPPED);
@@ -176,15 +224,20 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         return this.isConnected && roamDeviceManager != null;
     }
 
+    @Override
+    public Boolean isSearching() {
+        return this.isSearching;
+    }
+
     /** TransactionDelegate */
 
     @Override
     public void onTransactionCompleted() {
-        endTransaction();
-
-        if (this.shouldStopCardReaderAfterTransaction()) {
+        if (this.shouldStopCardReaderAfterOperation()) {
             // stop reader
             this.stopCardReader();
+        } else {
+            endOperation();
         }
     }
 
@@ -205,6 +258,10 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         } else if (!this.isConnected) {
             Log.d("wepay_sdk", "roam devicemanager type is " + this.roamDeviceManager.getType().toString());
 
+            if (this.connectedDeviceName != null) {
+                SharedPreferencesHelper.rememberCardReader(this.connectedDeviceName, this.config.getContext());
+            }
+
             this.executeCommand(Command.ReadCapabilities, this);
             // cancel timer if it exists
             if (this.readerInformNotConnectedHandler != null) {
@@ -219,19 +276,21 @@ public class IngenicoCardReaderManager implements CardReaderManager,
     public void onDisconnected() {
         Log.d("wepay_sdk", "IngenicoCardReaderManager onDisconnected");
 
-        if (this.isConnected) {
+        if (this.isConnected && !this.isCardReaderStopped) {
 
-            if (this.readerShouldWaitForCard) {
+            if (this.readerShouldPerformOperation) {
                 // inform external and stop waiting for card
                 this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
                 this.stopWaitingForCard();
-            } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
+            } else if (!this.config.shouldStopCardReaderAfterOperation()) {
                 // inform external
                 externalCardReaderHelper.informExternalCardReader(CardReaderStatus.NOT_CONNECTED);
             }
 
             this.isConnected = false;
         }
+
+        this.connectedDeviceName = null;
     }
 
     @Override
@@ -249,17 +308,23 @@ public class IngenicoCardReaderManager implements CardReaderManager,
 
             this.isConnected = false;
         }
+
+        this.connectedDeviceName = null;
     }
 
-    private void endTransaction() {
-        this.readerShouldWaitForCard = false;
+    private void endOperation() {
+        this.readerShouldPerformOperation = false;
 
         // stop waiting for card and cancel all pending notifications
         this.stopWaitingForCard();
     }
 
-    private boolean shouldStopCardReaderAfterTransaction() {
-        return this.config.shouldStopCardReaderAfterTransaction();
+    private boolean shouldStopCardReaderAfterOperation() {
+        return this.config.shouldStopCardReaderAfterOperation();
+    }
+
+    private boolean shouldDelayOperation() {
+        return this.dipTransactionHelper != null && this.dipTransactionHelper.isWaitingForCardRemoval;
     }
 
     private String getCurrentDeviceConfigHash() {
@@ -276,6 +341,42 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         return currentDeviceConfigHash;
     }
 
+    private void checkAndWaitForBatteryLevel() {
+        if (this.isConnected()) {
+            this.checkBatteryLevel();
+        } else {
+            this.startWaitingForReader();
+
+            // Find card readers after a delay because we might have just stopped
+            // card reader searches, and roam has problems if you cancel searches
+            // and immediately synchronously search again (discoveryComplete gets
+            // called for the cancelled searches).
+            this.findCardReadersAfterDelay(1000);
+        }
+    }
+
+    private void checkBatteryLevel() {
+        final IngenicoCardReaderManager processor = this;
+        this.delayedOperationHandler = new Handler();
+        this.delayedOperationRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (processor.isConnected()) {
+                    if (processor.shouldDelayOperation()) {
+                        processor.delayedOperationHandler.postDelayed(processor.delayedOperationRunnable, 1000);
+                    } else {
+                        processor.readerShouldPerformOperation = true;
+                        processor.delayedOperationRunnable = null;
+                        processor.roamDeviceManager.getBatteryStatus(processor);
+                    }
+                } else {
+                    // We've been disconnected so we should start up the card reader
+                    processor.startCardReader();
+                }
+            }
+        };
+        this.delayedOperationHandler.postDelayed(this.delayedOperationRunnable, 1000);
+    }
 
     private void checkAndWaitForEMVCard() {
         Log.d("wepay_sdk", "checkAndWaitForEMVCard");
@@ -294,7 +395,7 @@ public class IngenicoCardReaderManager implements CardReaderManager,
                             if (shouldReset) {
                                 resetDevice();
                             } else {
-                                setUserInterfaceOptions();
+                                setExpectedDOLs();
                             }
                         }
                     });
@@ -308,6 +409,12 @@ public class IngenicoCardReaderManager implements CardReaderManager,
             }
         } else {
             this.startWaitingForReader();
+
+            // Find card readers after a delay because we might have just stopped
+            // card reader searches, and roam has problems if you cancel searches
+            // and immediately synchronously search again (discoveryComplete gets
+            // called for the cancelled searches).
+            this.findCardReadersAfterDelay(1000);
         }
     }
 
@@ -333,6 +440,13 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         this.currPublicKeyIndex = 0;
         this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONFIGURING_READER);
         this.executeCommand(Command.ClearAIDsList, this);
+    }
+
+    private void stopPendingOperations() {
+        // stop battery info request if pending
+        if (this.delayedOperationHandler != null && this.delayedOperationRunnable != null) {
+            this.delayedOperationHandler.removeCallbacks(this.delayedOperationRunnable);
+        }
     }
 
     private void stopWaitingForCard()
@@ -361,7 +475,7 @@ public class IngenicoCardReaderManager implements CardReaderManager,
             // If we're just reading, use dummy info.
             Log.i("wepay_sdk", "Card request is for reading. Using dummy card info.");
             dipTransactionHelper.performEMVTransactionStartCommand(READ_AMOUNT, READ_CURRENCY.toString(), READ_ACCOUNT_ID, roamDeviceManager, requestType);
-        } else {
+        } else if (requestType == CardReaderRequest.CARD_READER_FOR_TOKENIZING) {
             // Otherwise, we need to get the info according to the client.
             Log.d("wepay_sdk", "fetchAuthInfoForTransaction");
             this.externalCardReaderHelper.informExternalCardReaderAmountCallback(new CardReaderHandler.CardReaderTransactionInfoCallback() {
@@ -382,6 +496,8 @@ public class IngenicoCardReaderManager implements CardReaderManager,
                     }
                 }
             });
+        } else {
+            Log.e("wepay_sdk", "fetchAuthInfoForTransaction called with invalid card reader request type.");
         }
     }
 
@@ -445,6 +561,10 @@ public class IngenicoCardReaderManager implements CardReaderManager,
                     case ConfigureUserInterfaceOptions:
                         roamDeviceManager.getConfigurationManager().setUserInterfaceOptions(
                                 getCardReaderTimeout(), LanguageCode.ENGLISH, new Byte((byte) 0x00), new Byte((byte) 0x00), handler);
+                        break;
+                    case BatteryInfo:
+                        roamDeviceManager.getBatteryStatus(handler);
+                        break;
                     default:
                         break;
 
@@ -471,24 +591,35 @@ public class IngenicoCardReaderManager implements CardReaderManager,
 
         Command cmd = (Command) data.get(Parameter.Command);
         ResponseCode responseCode = (ResponseCode) data.get(Parameter.ResponseCode);
-        ResponseType responseType = (ResponseType) data.get(Parameter.ResponseType);
 
         if (responseCode == ResponseCode.Error) {
             this.handleRoamError(data);
         } else {
             switch (cmd) {
                 case ReadCapabilities:
-                    currentDeviceSerialNumber = (String) data
-                            .get(Parameter.InterfaceDeviceSerialNumber);
-                    isConnected = true;
+                    currentDeviceSerialNumber = (String) data.get(Parameter.InterfaceDeviceSerialNumber);
+                    deviceSerialNumberFetchCount++;
 
-                    if (readerShouldWaitForCard) {
-                        // inform external and start waiting for card
-                        externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
-                        checkAndWaitForEMVCard();
-                    } else if (!this.config.shouldStopCardReaderAfterTransaction()) {
-                        // inform external
-                        externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
+                    // Only proceed with completing the connection if we were able to get a serial number or we've given up.
+                    if (currentDeviceSerialNumber != null || deviceSerialNumberFetchCount > MAX_TRIES_FETCH_DEVICE_SERIAL_NUMBER) {
+                        isConnected = true;
+
+                        if (readerShouldPerformOperation) {
+                            // inform external and start waiting for card
+                            externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
+                            if (this.requestType == CardReaderRequest.CARD_READER_FOR_BATTERY_LEVEL) {
+                                this.checkBatteryLevel();
+                            } else {
+                                this.checkAndWaitForEMVCard();
+                            }
+                        } else if (!this.config.shouldStopCardReaderAfterOperation()) {
+                            // inform external
+                            externalCardReaderHelper.informExternalCardReader(CardReaderStatus.CONNECTED);
+                        }
+                    } else if (deviceSerialNumberFetchCount < MAX_TRIES_FETCH_DEVICE_SERIAL_NUMBER) {
+                        this.executeCommand(Command.ReadCapabilities, this);
+                    } else {
+                        this.resetDevice();
                     }
 
                     break;
@@ -517,7 +648,21 @@ public class IngenicoCardReaderManager implements CardReaderManager,
                     this.setUserInterfaceOptions();
                     break;
                 case ConfigureUserInterfaceOptions:
-                    this.setExpectedDOLs();
+                    if (this.requestType == CardReaderRequest.CARD_READER_FOR_BATTERY_LEVEL) {
+                        this.executeCommand(Command.BatteryInfo, this);
+                    } else {
+                        this.setExpectedDOLs();
+                    }
+                    break;
+                case BatteryInfo:
+                    int batteryLevel = (int) data.get(Parameter.BatteryLevel);
+                    this.externalCardReaderHelper.informExternalBatteryLevelSuccess(batteryLevel);
+                    if (this.config.shouldStopCardReaderAfterOperation()) {
+                        // Stop if configured to
+                        this.stopCardReader();
+                    } else {
+                        this.endOperation();
+                    }
                     break;
                 default:
                     Log.d("wepay_sdk","Error: unexpected command " + cmd.toString());
@@ -526,25 +671,173 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         }
     }
 
+    private void findCardReaders() {
+        this.isSearching = true;
+        this.detector = new IngenicoCardReaderDetector();
+        this.detector.findAvailableCardReaders(config, this);
+	    this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.SEARCHING_FOR_READER);
+    }
+
+    private void findCardReadersAfterDelay(long delayMillis) {
+        this.isSearching = true;
+        this.findReaderRunnable = new Runnable() {
+            @Override
+            public void run() {
+                findCardReaders();
+            }
+        };
+        this.findReaderHandler.postDelayed(this.findReaderRunnable, delayMillis);
+    }
+
+    private void stopFindingCardReaders() {
+        this.isSearching = false;
+        if (this.detector != null) {
+            this.detector.stopFindingCardReaders();
+            this.detector = null;
+        }
+
+        if (this.findReaderHandler != null) {
+            this.findReaderHandler.removeCallbacks(this.findReaderRunnable);
+        }
+    }
+
     /** CardReaderDetectionDelegate */
-
     @Override
-    public void onCardReaderManagerDetected(DeviceManager roamDeviceManager) {
-        this.roamDeviceManager = roamDeviceManager;
-        this.roamDeviceManager.registerDeviceStatusHandler(this);
+    public void onCardReaderDevicesDetected(List<Device> devices) {
+        this.isSearching = false;
+        this.discoveredCardReaders = devices;
+        final ArrayList<String> cardReaders = getNamesFromDevices(devices);
+        String rememberedName;
+        Device rememberedDevice;
 
-        // Manually call onConnected() the first time to get everything going.
-        this.onConnected();
+        // Stop waiting for the card because now we are waiting for the partner.
+        stopWaitingForCard();
+
+        rememberedName = SharedPreferencesHelper.getRememberedCardReader(this.config.getContext());
+        rememberedDevice = this.getDeviceByName(rememberedName, devices);
+
+        if (rememberedDevice == null) {
+            // No remembered device exists, or the remembered device wasn't detected --
+            // ask what it should be from a list.
+            Log.d("wepay_sdk", "No remembered device detected. Asking which device should be used.");
+            this.externalCardReaderHelper.informExternalCardReaderSelectionCallback(new CardReaderHandler.CardReaderSelectionCallback() {
+                @Override
+                public void useCardReaderAtIndex(int selectedIndex) {
+                    roamDeviceManager = getDeviceManagerFromDevices(discoveredCardReaders, selectedIndex);
+
+                    if (roamDeviceManager != null) {
+                        // selectedIndex validated by having a response from getDeviceManagerFromDevices()
+                        Device selectedDevice = discoveredCardReaders.get(selectedIndex);
+                        CalibrationParameters params = calibrationHelper.getCalibrationParams(config);
+
+                        connectedDeviceName = cardReaders.get(selectedIndex);
+                        initializeDeviceManager(roamDeviceManager, params, selectedDevice);
+                    } else {
+                        Error selectionError = Error.getInvalidCardReaderSelectionError();
+                        externalCardReaderHelper.informExternalCardReaderError(selectionError);
+
+                        if (config.shouldRestartTransactionAfterOtherErrors()) {
+                            processCardReaderRequest();
+                        }
+                    }
+                }
+            }, getSanitizedNamesFromDevices(devices));
+        } else {
+            // Detected an existing remembered device, so use that.
+            Log.d("wepay_sdk", "Detected remembered device " + rememberedName + ". Initializing this device");
+
+            CalibrationParameters params = calibrationHelper.getCalibrationParams(config);
+            this.roamDeviceManager = this.getDeviceManagerForDevice(rememberedDevice);
+
+            if (roamDeviceManager.getClass() == MOBY3000DeviceManager.class) {
+                roamDeviceManager.getConfigurationManager().activateDevice(rememberedDevice);
+            }
+
+            connectedDeviceName = rememberedName;
+            initializeDeviceManager(roamDeviceManager, params, rememberedDevice);
+        }
     }
 
-    @Override
-    public void onCardReaderDetectionTimeout() {
-        Log.d("wepay_sdk", "onCardReaderDetectionTimeout");
+    private Device getDeviceByName(String name, List<Device> devices) {
+        Device foundDevice = null;
+
+        for (Device d : devices) {
+            if (d.getName().equals(name)) {
+                foundDevice = d;
+                break;
+            }
+        }
+
+        return foundDevice;
     }
 
-    @Override
-    public void onCardReaderDetectionFailed(String message) {
-        Log.d("wepay_sdk", "device detection failed with message " + message);
+    private DeviceManager getDeviceManagerFromDevices(List<Device> devices, int index) {
+        DeviceManager manager = null;
+
+        if (-1 < index && index < devices.size()) {
+            Device selectedDevice = devices.get(index);
+
+            manager = this.getDeviceManagerForDevice(selectedDevice);
+        }
+
+        return manager;
+    }
+
+    private DeviceManager getDeviceManagerForDevice(Device device) {
+        DeviceManager manager;
+
+        if (device.getName().equals("AUDIOJACK") && config.getMockConfig().isUseMockCardReader()) {
+            // Attempt Mock RP350 connection
+            MockRoamDeviceManager mockManager = MockRoamDeviceManager.getDeviceManager();
+            mockManager.setMockConfig(config.getMockConfig());
+            manager = mockManager;
+        } else if (device.getName().equals("AUDIOJACK") || device.getName().startsWith("RP350")) {
+            // Attempt Real RP350 connection
+            manager = RoamReaderUnifiedAPI.getDeviceManager(DeviceType.RP350x);
+        } else {
+            // Attempt MOBY3000 connection
+            manager = RoamReaderUnifiedAPI.getDeviceManager(DeviceType.MOBY3000);
+        }
+
+        return manager;
+    }
+
+    private ArrayList<String> getNamesFromDevices(List<Device> devices) {
+        ArrayList<String> names = new ArrayList<>(devices.size());
+        for (Device d : devices) {
+            names.add(d.getName());
+        }
+        return names;
+    }
+
+    private ArrayList<String> getSanitizedNamesFromDevices(List<Device> devices) {
+        ArrayList<String> names = new ArrayList<>(devices.size());
+        for (Device d : devices) {
+            if (d.getName().startsWith("RP350")) {
+                names.add("AUDIOJACK");
+            } else {
+                names.add(d.getName());
+            }
+        }
+        return names;
+    }
+
+    private void initializeDeviceManager(DeviceManager roamDeviceManager, CalibrationParameters params, Device device) {
+        if (!this.isConnected && this.readerShouldPerformOperation) {
+            // If readerShouldPerformOperation and we're not currently connected, let's reset/start
+            // the connection timer.
+            this.startWaitingForReader();
+        }
+
+        if (roamDeviceManager.getClass() == MOBY3000DeviceManager.class) {
+            roamDeviceManager.getConfigurationManager().activateDevice(device);
+        }
+
+        if (params != null) {
+            roamDeviceManager.initialize(this.config.getContext(), this, params);
+        } else {
+            roamDeviceManager.initialize(this.config.getContext(), this);
+        }
     }
 
     private void setUserInterfaceOptions() {
@@ -556,7 +849,26 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         this.roamDeviceManager.getConfigurationManager().setExpectedOnlineDOL(this.dipConfighelper.getOnlineDOLList());
         this.roamDeviceManager.getConfigurationManager().setExpectedResponseDOL(this.dipConfighelper.getResponseDOLList());
 
-        this.fetchAuthInfoForTransaction();
+        final IngenicoCardReaderManager processor = this;
+        this.delayedOperationHandler = new Handler();
+        this.delayedOperationRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (processor.isConnected()) {
+                    if (processor.shouldDelayOperation()) {
+                        processor.delayedOperationHandler.postDelayed(processor.delayedOperationRunnable, 1000);
+                    } else {
+                        processor.readerShouldPerformOperation = true;
+                        processor.delayedOperationRunnable = null;
+                        fetchAuthInfoForTransaction();
+                    }
+                } else {
+                    // We've been disconnected so we should start up the card reader
+                    processor.startCardReader();
+                }
+            }
+        };
+        this.delayedOperationHandler.postDelayed(this.delayedOperationRunnable, 1000);
     }
 
     private void submitPublicKeys() {
@@ -583,7 +895,17 @@ public class IngenicoCardReaderManager implements CardReaderManager,
     private void handleRoamError(Map<Parameter, Object> data) {
         // Retry the command
         Command cmd = (Command) data.get(Parameter.Command);
-        this.executeCommand(cmd, this);
+
+        if (cmd == Command.BatteryInfo) {
+            this.externalCardReaderHelper.informExternalBatteryLevelError(Error.getFailedToGetBatteryLevelError());
+            if (this.config.shouldStopCardReaderAfterOperation()) {
+                this.stopCardReader();
+            }
+        } else if (data.get(Parameter.ErrorCode) == ErrorCode.CardReaderNotConnected) {
+            // Do nothing, the flow will continue when we get our onDisconnected response
+        } else {
+            this.executeCommand(cmd, this);
+        }
     }
 
     private int getCardReaderTimeout() {
