@@ -1,0 +1,5 @@
+{ "project_id": "iOS SDK"
+, "conduit_uri": "https://phabricator.corp.wepay-inc.com/"
+, "https.cabundle": "../../wepay-android-tools/wepay.pem"
+, "git.default-relative-commit" : "origin/gh-pages"
+}
