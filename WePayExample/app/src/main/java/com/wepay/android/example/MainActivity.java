@@ -25,7 +25,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -165,61 +164,6 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     /**
-     * AuthorizationHandler - onAuthorizationSuccess
-     */
-    @Override
-    public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
-        this.writeToConsole("\nAuthorized amount: " + String.valueOf(authorizationInfo.getAuthorizedAmount()));
-        this.writeToConsole("Token id: " + authorizationInfo.getTokenId());
-        this.writeToConsole("Transaction Token: " + authorizationInfo.getTransactionToken());
-        this.setStatusText("Authorized!");
-    }
-
-    /**
-     * AuthorizationHandler - onAuthorizationError
-     */
-    @Override
-    public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
-        this.writeToConsole("\nAuthorization failed! error:");
-        this.writeToConsole(error.toString());
-        this.setStatusText("Authorization failed!");
-    }
-
-    /**
-     * CardReaderHandler - onEMVApplicationSelectionRequested
-     */
-    @Override
-    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
-        int selectedIndex = 0;
-
-        this.writeToConsole("\nPerforming application selection:\n");
-        this.writeToConsole(applications.toString());
-        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
-
-        callback.useApplicationAtIndex(selectedIndex);
-    }
-
-    /**
-     * CardReaderHandler - onSuccess
-     */
-    @Override
-    public void onSuccess(PaymentInfo paymentInfo) {
-        this.writeToConsole("\nSuccess! Info from card reader:");
-        this.writeToConsole(paymentInfo.toString());
-        this.setStatusText("Dip/Swipe succeeded");
-    }
-
-    /**
-     * CardReaderHandler - onError
-     */
-    @Override
-    public void onError(final Error error) {
-        this.writeToConsole("\nDip/Swipe failed! error:");
-        this.writeToConsole(error.toString());
-        this.setStatusText("Dip/Swipe failed");
-    }
-
-    /**
      * CardReaderHandler - onStatusChange
      */
     @Override
@@ -250,6 +194,38 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     /**
+     * CardReaderHandler - onCardReaderSelection
+     */
+    @Override
+    public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> devices) {
+        LayoutInflater inflater = this.getLayoutInflater();
+        View view = inflater.inflate(R.layout.fragment_available_readers, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(view);
+        builder.setTitle("Discovered devices:");
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                callback.useCardReaderAtIndex(-1);
+            }
+        });
+        list = (ListView) view.findViewById(R.id.available_readers_list);
+        listAdapter = new ArrayAdapter<>(this, R.layout.device_name);
+        list.setAdapter(listAdapter);
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                callback.useCardReaderAtIndex(position);
+                deviceSelectionDialog.dismiss();
+
+            }
+        });
+        listAdapter.addAll(devices);
+        deviceSelectionDialog = builder.create();
+        deviceSelectionDialog.show();
+    }
+
+    /**
      * CardReaderHandler - onReaderResetRequested
      */
     @Override
@@ -265,6 +241,20 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         CurrencyCode currencyCode = CurrencyCode.USD;
         this.writeToConsole("using transaction info: " + this.amount + " " + currencyCode + " " + this.accountId);
         callback.useTransactionInfo(this.amount, currencyCode, this.accountId);
+    }
+
+    /**
+     * CardReaderHandler - onEMVApplicationSelectionRequested
+     */
+    @Override
+    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
+        int selectedIndex = 0;
+
+        this.writeToConsole("\nPerforming application selection:\n");
+        this.writeToConsole(applications.toString());
+        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
+
+        callback.useApplicationAtIndex(selectedIndex);
     }
 
     /**
@@ -305,6 +295,28 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     /**
+     * CardReaderHandler - onSuccess
+     */
+    @Override
+    public void onSuccess(PaymentInfo paymentInfo) {
+        this.writeToConsole("\nSuccess! Info from card reader:");
+        this.writeToConsole(paymentInfo.toString());
+        this.setStatusText("Dip/Swipe succeeded");
+    }
+
+    /**
+     * CardReaderHandler - onError
+     */
+    @Override
+    public void onError(final Error error) {
+        this.writeToConsole("\nDip/Swipe failed! error:");
+        this.writeToConsole(error.toString());
+        this.setStatusText("Dip/Swipe failed");
+    }
+
+
+
+    /**
      * TokenizationHandler - onSuccess
      */
     @Override
@@ -325,6 +337,29 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole(error.toString());
         this.setStatusText("Tokenization failed");
     }
+
+
+    /**
+     * AuthorizationHandler - onAuthorizationSuccess
+     */
+    @Override
+    public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
+        this.writeToConsole("\nAuthorized amount: " + String.valueOf(authorizationInfo.getAuthorizedAmount()));
+        this.writeToConsole("Token id: " + authorizationInfo.getTokenId());
+        this.writeToConsole("Transaction Token: " + authorizationInfo.getTransactionToken());
+        this.setStatusText("Authorized!");
+    }
+
+    /**
+     * AuthorizationHandler - onAuthorizationError
+     */
+    @Override
+    public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
+        this.writeToConsole("\nAuthorization failed! error:");
+        this.writeToConsole(error.toString());
+        this.setStatusText("Authorization failed!");
+    }
+
 
     /**
      * CheckoutHandler - onError

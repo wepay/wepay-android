@@ -4,7 +4,6 @@ import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 
-import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 public class TestAuthorizationHandler implements AuthorizationHandler {

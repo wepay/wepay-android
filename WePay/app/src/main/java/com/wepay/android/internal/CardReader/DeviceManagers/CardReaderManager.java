@@ -13,6 +13,4 @@ public interface CardReaderManager {
     void calibrateDevice(final CalibrationHandler calibrationHandler);
     void processCardReaderRequest();
     void setCardReaderRequestType(CardReaderRequest cardReaderRequestType);
-    Boolean isConnected();
-    Boolean isSearching();
 }

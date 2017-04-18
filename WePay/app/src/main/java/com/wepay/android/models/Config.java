@@ -3,6 +3,7 @@ package com.wepay.android.models;
 import android.content.Context;
 
 import com.google.gson.Gson;
+import com.wepay.android.enums.LogLevel;
 
 import java.util.LinkedHashMap;
 
@@ -43,6 +44,9 @@ public class Config {
 
     /** Determines if the transaction should automatically restart after an error other than general error. Defaults to false. */
     private boolean restartTransactionAfterOtherErrors = false;
+
+    /** Determines what log messages the SDK will show. Defaults to ALL. */
+    private LogLevel logLevel = LogLevel.ALL;
 
     private MockConfig mockConfig;
 
@@ -209,6 +213,26 @@ public class Config {
      */
     public Config setRestartTransactionAfterOtherErrors(boolean restartTransactionAfterOtherErrors) {
         this.restartTransactionAfterOtherErrors = restartTransactionAfterOtherErrors;
+        return this;
+    }
+
+    /**
+     * Gets the log level.
+     *
+     * @return the logLevel
+     */
+    public LogLevel getLogLevel() {
+        return this.logLevel;
+    }
+
+    /**
+     * Sets the log level.
+     *
+     * @param logLevel determines which SDK log messages should show
+     * @return the config
+     */
+    public Config setLogLevel(LogLevel logLevel) {
+        this.logLevel = logLevel;
         return this;
     }
 

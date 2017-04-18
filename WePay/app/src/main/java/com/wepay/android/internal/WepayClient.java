@@ -8,8 +8,8 @@ import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
-import com.wepay.android.models.MockConfig;
 import com.wepay.android.models.Config;
+import com.wepay.android.models.MockConfig;
 
 import org.apache.http.entity.StringEntity;
 import org.json.JSONException;
@@ -33,7 +33,7 @@ public class WepayClient {
     private static final String WEPAY_API_VERSION = "2016-03-30";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v3.0.0-beta-2";
+    private static final String USER_AGENT = "WePay Android SDK v3.0.0-prerelease-1";
 
     /** The client. */
     private static AsyncHttpClient client = new AsyncHttpClient();

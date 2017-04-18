@@ -2,7 +2,6 @@ package com.wepay.android.internal.CardReader.DeviceHelpers;
 
 import android.os.Build;
 import android.os.Handler;
-import android.util.Log;
 
 import com.landicorp.emv.comm.api.CommParameter;
 import com.landicorp.robert.comm.setting.AudioCommParam;
@@ -13,6 +12,7 @@ import com.roam.roamreaderunifiedapi.constants.CalibrationResult;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
 import com.wepay.android.CalibrationHandler;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
@@ -50,7 +50,7 @@ public class CalibrationHelper {
                         Runnable myRunnable = new Runnable() {
                             @Override
                             public void run() {
-                                Log.d("wepay_sdk", "CalibrationListener.onComplete: " + calibrationResult.toString());
+                                LogHelper.log("CalibrationListener.onComplete: " + calibrationResult.toString());
                                 switch (calibrationResult) {
                                     case Succeeded:
                                         AudioCommParam a = calibrationParameters.getParams().getAudioCommParam();
@@ -68,7 +68,7 @@ public class CalibrationHelper {
 
                                         //save calibration result
                                         Boolean saved = SharedPreferencesHelper.saveCalibration(config.getContext(), params.toString());
-                                        Log.d("wepay_sdk", "saving calibration operation succeeded: " + saved.toString());
+                                        LogHelper.log("saving calibration operation succeeded: " + saved.toString());
                                         //return result
                                         calibrationHandler.onComplete(com.wepay.android.enums.CalibrationResult.SUCCEEDED, params);
                                         break;
@@ -88,7 +88,7 @@ public class CalibrationHelper {
 
                     @Override
                     public void onInformation(String s) {
-                        Log.d("wepay_sdk", "CalibrationListener.onInformation: " + s);
+                        LogHelper.log("CalibrationListener.onInformation: " + s);
                         // Do nothing
                     }
 
@@ -111,18 +111,18 @@ public class CalibrationHelper {
 
         CalibrationParameters savedParams = this.fetchSavedParams(config);
         if (savedParams != null) {
-            Log.d("wepay_sdk", "using saved device profile");
+            LogHelper.log("using saved device profile");
             return savedParams;
         }
 
         String name = getDeviceName(config);
-        Log.d("wepay_sdk", "device name: " + name);
+        LogHelper.log("device name: " + name);
 
         if (name.equalsIgnoreCase("Samsung SM-G900P")
                 || name.equalsIgnoreCase("Samsung SM-G900T")
                 || name.equalsIgnoreCase("Samsung SM-G900A"))
         {
-            Log.d("wepay_sdk", "using special device profile");
+            LogHelper.log("using special device profile");
 
             int wave = 1;
             short sendBaud = 3675;
@@ -142,7 +142,7 @@ public class CalibrationHelper {
 
             return new CalibrationParameters(cp);
         } else if (name.equalsIgnoreCase("Samsung SM-G900W8")) {
-            Log.d("wepay_sdk", "using special device profile");
+            LogHelper.log("using special device profile");
 
             int wave = 1;
             short sendBaud = 3675;
@@ -162,8 +162,12 @@ public class CalibrationHelper {
 
             return new CalibrationParameters(cp);
         } else if(name.equalsIgnoreCase("LGE Nexus 4")
-                || name.equalsIgnoreCase("LGE Nexus 5")) {
-            Log.d("wepay_sdk", "using special device profile");
+                || name.equalsIgnoreCase("LGE Nexus 5")
+                || name.equalsIgnoreCase("LGE Nexus 5X")
+                || name.equalsIgnoreCase("Samsung SM-T110")
+                || name.equalsIgnoreCase("HTC6600LVW")
+                || name.equalsIgnoreCase("Quanta QTAQZ3")) {
+            LogHelper.log("using special device profile");
 
             int wave = 1;
             short sendBaud = 3675;
@@ -183,7 +187,7 @@ public class CalibrationHelper {
 
             return new CalibrationParameters(cp);
         } else {
-            Log.d("wepay_sdk", "using default device profile");
+            LogHelper.log("using default device profile");
             return null;
         }
     }
@@ -194,7 +198,7 @@ public class CalibrationHelper {
         String savedParams = SharedPreferencesHelper.getCalibration(config.getContext());
 
         if (savedParams != null) {
-            Log.d("wepay_sdk", "found calibration string: " + savedParams);
+            LogHelper.log("found calibration string: " + savedParams);
 
             try {
                 JSONObject paramsJSON = new JSONObject(savedParams);

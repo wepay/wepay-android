@@ -3,15 +3,13 @@ package com.wepay.android.internal.CardReader.DeviceHelpers;
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Handler;
-import android.util.Log;
 
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
-import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
 import com.roam.roamreaderunifiedapi.callback.SearchListener;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
-import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
 import com.roam.roamreaderunifiedapi.data.Device;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
@@ -54,6 +52,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
     private Handler deviceDetectionTimeoutHandler = new Handler();
 
     private int completedDiscoveries = 0;
+    private boolean isStopped = false;
 
     public IngenicoCardReaderDetector() {
         this.rp350xRoamDeviceManager = RoamReaderUnifiedAPI.getDeviceManager(DeviceType.RP350x);
@@ -65,7 +64,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
     }
 
     public void findAvailableCardReaders(Config config, CardReaderDetectionDelegate detectionDelegate) {
-        Log.d("wepay_sdk", "findAvailableCardReaders");
+        LogHelper.log("findAvailableCardReaders");
         MockConfig mockConfig = config.getMockConfig();
 
         this.config = config;
@@ -83,14 +82,17 @@ public class IngenicoCardReaderDetector implements SearchListener {
     }
 
     public void stopFindingCardReaders() {
-        Log.d("wepay_sdk", "stopFindingCardReaders");
-        this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
-        this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
+        LogHelper.log("stopFindingCardReaders");
+        this.isStopped = true;
         completedDiscoveries = 0;
         this.discoveredDevices.clear();
+
+        this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
+        this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
     }
 
     private void beginDetection() {
+        this.isStopped = false;
         completedDiscoveries = 0;
 
         for (DeviceManager manager : this.supportedDeviceManagers) {
@@ -124,7 +126,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
     }
 
     private void discoveryComplete() {
-        Log.d("wepay_sdk", "discoveryComplete");
+        LogHelper.log("discoveryComplete");
         this.stopTimeCounter(this.deviceDetectionTimeoutHandler);
         this.cancelAllDeviceManagerSearches(this.supportedDeviceManagers);
 
@@ -133,8 +135,8 @@ public class IngenicoCardReaderDetector implements SearchListener {
             List<Device> list = new ArrayList<>(this.discoveredDevices);
             this.delegate.onCardReaderDevicesDetected(list);
             this.discoveredDevices.clear();
-        }
-        else {
+            this.isStopped = true;
+        } else if (!isStopped) {
             this.beginDetection();
         }
     }
@@ -169,7 +171,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
 
     @Override
     public void onDeviceDiscovered(Device device) {
-        Log.d("wepay_sdk", "onDeviceDiscovered " + device.getName());
+        LogHelper.log("onDeviceDiscovered " + device.getName());
 
         // Maintain a list of all discovered devices that have the name AUDIOJACK or MOB30*
         String name = device.getName();
@@ -185,7 +187,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
 
             if (name.equals(rememberedName)) {
                 // Stop searching for a device if we've found the card reader we remember.
-                Log.d("wepay_sdk", "onDeviceDiscovered: discovered remembered reader " + name);
+                LogHelper.log("onDeviceDiscovered: discovered remembered reader " + name);
 
                 this.discoveryComplete();
             }
@@ -195,7 +197,7 @@ public class IngenicoCardReaderDetector implements SearchListener {
     @Override
     public void onDiscoveryComplete() {
         completedDiscoveries++;
-        Log.d("wepay_sdk", "onDiscoveryComplete [" + completedDiscoveries + "]");
+        LogHelper.log("onDiscoveryComplete [" + completedDiscoveries + "]");
 
         if (completedDiscoveries >= this.supportedDeviceManagers.size()) {
             this.discoveryComplete();

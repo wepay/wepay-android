@@ -10,7 +10,7 @@ android {
         minSdkVersion 12
         targetSdkVersion 23
         versionCode 1
-        versionName '3.0.0-beta-2'
+        versionName '3.0.0-prerelease-1'
         project.archivesBaseName = "wepay-android"
         project.version = android.defaultConfig.versionName
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"

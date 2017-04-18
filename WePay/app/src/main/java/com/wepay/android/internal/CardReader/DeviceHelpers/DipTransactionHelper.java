@@ -1,7 +1,6 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
 import android.util.Base64;
-import android.util.Log;
 
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
@@ -12,12 +11,12 @@ import com.roam.roamreaderunifiedapi.constants.ProgressMessage;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.roam.roamreaderunifiedapi.constants.ResponseType;
 import com.roam.roamreaderunifiedapi.data.ApplicationIdentifier;
-import com.wepay.android.AuthorizationHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.internal.CardReader.Utilities.TransactionUtilities;
 import com.wepay.android.internal.CardReaderDirector.CardReaderRequest;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -124,11 +123,12 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.startTransaction();
     }
 
+    public void stopTransaction() {
+        this.resetStates();
+    }
+
     private void startTransaction() {
-        this.shouldReportSwipedEMVCard = false;
-        this.shouldReportCheckCardOrientation = true;
-        this.isFallbackSwipe = false;
-        this.shouldIssueReversal = false;
+        this.resetStates();
 
         this.selectedAID = null;
         this.authCode = null;
@@ -141,6 +141,14 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         this.authorizationError = null;
 
         this.executeCommand(Command.EMVStartTransaction, this);
+    }
+
+    private void resetStates() {
+        this.shouldReportSwipedEMVCard = false;
+        this.shouldReportCheckCardOrientation = true;
+        this.isFallbackSwipe = false;
+        this.shouldIssueReversal = false;
+        this.isWaitingForCardRemoval = false;
     }
 
     private Map<Parameter, Object> getStartTransactionInputMap() {
@@ -171,7 +179,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         input.put(Parameter.AmountOtherNumeric, "000000000000");
         input.put(Parameter.ExtraProgressMessageFlag, "01");
 
-        Log.d("wepay_sdk", "getStartTransactionInputMap:\n" + input.toString());
+        LogHelper.log("getStartTransactionInputMap:\n" + input.toString());
         return input;
     }
 
@@ -182,7 +190,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             input.put(Parameter.ApplicationIdentifier, applicationIdentifier.getAID());
         }
 
-        Log.d("wepay_sdk", "getFinalApplicationSelectionInputMap:\n" + input.toString());
+        LogHelper.log("getFinalApplicationSelectionInputMap:\n" + input.toString());
         return input;
     }
 
@@ -206,7 +214,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         input.put(Parameter.TerminalActionCodeOnline, tacList.get(1));
         input.put(Parameter.TerminalActionCodeDefault, tacList.get(2));
 
-        Log.d("wepay_sdk", "getTransactionDataInputMap:\n" + input.toString());
+        LogHelper.log("getTransactionDataInputMap:\n" + input.toString());
         return input;
     }
 
@@ -251,7 +259,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             }
         }
 
-        Log.d("wepay_sdk", "getCompleteTransactionInputMap:\n" + input.toString());
+        LogHelper.log("getCompleteTransactionInputMap:\n" + input.toString());
         return input;
     }
 
@@ -260,12 +268,12 @@ public class DipTransactionHelper implements DeviceResponseHandler {
                 Parameter.class);
         input.put(Parameter.Command, Command.EMVTransactionStop);
 
-        Log.d("wepay_sdk", "getTransactionStopInputMap:\n" + input.toString());
+        LogHelper.log("getTransactionStopInputMap:\n" + input.toString());
         return input;
     }
 
     private void executeCommand(final Command cmd, final DeviceResponseHandler handler) {
-        Log.d("wepay_sdk", "Executing " + cmd.toString());
+        LogHelper.log("Executing " + cmd.toString());
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -298,7 +306,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
 
     @Override
     public void onResponse(Map<Parameter, Object> data) {
-        Log.d("wepay_sdk", data.toString());
+        LogHelper.log(data.toString());
         this.shouldReportCheckCardOrientation = false;
 
         Error error = this.validateEMVResponse(data);
@@ -466,7 +474,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             public void onFailure(Error error) {
                 authorizationError = error;
                 consumeAuthenticationData(null, null, null);
-                Log.d("wepay_sdk", "handlePaymentInfo onFailure");
+                LogHelper.log("handlePaymentInfo onFailure");
             }
 
             @Override
@@ -635,7 +643,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
 
     @Override
     public void onProgress(ProgressMessage messageType, String additionalMessage) {
-        Log.d("wepay_sdk", "Command progress: " + messageType.toString() + " - " + additionalMessage);
+        LogHelper.log("Command progress: " + messageType.toString() + " - " + additionalMessage);
 
         switch (messageType) {
             case PleaseInsertCard:
@@ -676,7 +684,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
                 break;
             default:
                 // Do nothing on progress, react to the response when it comes
-                Log.d("wepay_sdk", "unhandled progress message: " + messageType.toString() + " - " + additionalMessage);
+                LogHelper.log("unhandled progress message: " + messageType.toString() + " - " + additionalMessage);
                 break;
         }
     }
@@ -723,7 +731,7 @@ public class DipTransactionHelper implements DeviceResponseHandler {
         } else {
             // complete the transaction
             this.executeCommand(Command.EMVCompleteTransaction, this);
-            Log.d("wepay_sdk", "CMD: complete transaction");
+            LogHelper.log("CMD: complete transaction");
         }
     }
 

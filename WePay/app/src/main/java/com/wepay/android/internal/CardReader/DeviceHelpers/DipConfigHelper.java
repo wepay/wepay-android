@@ -1,10 +1,9 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
-import android.util.Log;
-
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.data.ApplicationIdentifier;
 import com.roam.roamreaderunifiedapi.data.PublicKey;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.models.Config;
 
 import java.io.UnsupportedEncodingException;
@@ -113,7 +112,7 @@ public class DipConfigHelper {
             }
         }
 
-        Log.d("wepay_sdk", "using TACs: " + tacDenial + ", " + tacOnline + ", " + tacDefault + " for AID: " + selectedAID);
+        LogHelper.log("using TACs: " + tacDenial + ", " + tacOnline + ", " + tacDefault + " for AID: " + selectedAID);
 
         ArrayList<String> tacList = new ArrayList<String>();
         tacList.add(tacDenial);

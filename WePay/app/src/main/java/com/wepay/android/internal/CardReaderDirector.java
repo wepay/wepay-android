@@ -1,15 +1,15 @@
 package com.wepay.android.internal;
 
 import android.content.Context;
-import android.util.Log;
 
+import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
 import com.wepay.android.AuthorizationHandler;
 import com.wepay.android.BatteryLevelHandler;
 import com.wepay.android.CalibrationHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.TokenizationHandler;
 import com.wepay.android.enums.CardReaderStatus;
-import com.wepay.android.internal.CardReader.DeviceHelpers.BatteryHelper;
+import com.wepay.android.enums.LogLevel;
 import com.wepay.android.internal.CardReader.DeviceHelpers.ExternalCardReaderHelper;
 import com.wepay.android.internal.CardReader.DeviceManagers.CardReaderManager;
 import com.wepay.android.internal.CardReader.DeviceManagers.IngenicoCardReaderManager;
@@ -34,13 +34,21 @@ public class CardReaderDirector {
     public CardReaderDirector(Config config) {
         this.config = config;
         this.externalCardReaderHelper = new ExternalCardReaderHelper();
+
+        // Choose to enable Roam debugging.
+        if (com.wepay.wepay.BuildConfig.DEBUG) {
+            // Log response only when in debug builds
+            RoamReaderUnifiedAPI.enableDebugLogging(config.getLogLevel() == LogLevel.ALL);
+        } else {
+            RoamReaderUnifiedAPI.enableDebugLogging(false);
+        }
     }
 
     public void startCardReaderForReading(CardReaderHandler cardReaderHandler) {
         this.externalCardReaderHelper.setCardReaderHandler(cardReaderHandler);
         this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_READING;
 
-        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
+        if (this.cardReaderManager != null) {
             this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
             this.cardReaderManager.processCardReaderRequest();
         } else {
@@ -56,7 +64,7 @@ public class CardReaderDirector {
         this.sessionId = sessionId;
         this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_TOKENIZING;
 
-        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
+        if (this.cardReaderManager != null) {
             this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
             this.cardReaderManager.processCardReaderRequest();
         } else {
@@ -66,8 +74,8 @@ public class CardReaderDirector {
 
     public void stopCardReader()
     {
-        if (!this.isCardReaderDeviceManagerConnected() && !this.isCardReaderDeviceManagerSearching()) {
-            Log.d("wepay_sdk", "CRHelper stopCardReader - no card reader connected");
+        if (this.cardReaderManager == null) {
+            LogHelper.log("CRHelper stopCardReader - no card reader connected");
             this.externalCardReaderHelper.informExternalCardReader(CardReaderStatus.STOPPED);
         } else {
             this.cardReaderManager.stopCardReader();
@@ -87,7 +95,7 @@ public class CardReaderDirector {
         this.externalCardReaderHelper.setBatteryLevelHandler(batteryLevelHandler);
         this.cardReaderRequest = CardReaderRequest.CARD_READER_FOR_BATTERY_LEVEL;
 
-        if (this.isCardReaderDeviceManagerConnected() || this.isCardReaderDeviceManagerSearching()) {
+        if (this.cardReaderManager != null) {
             this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
             this.cardReaderManager.processCardReaderRequest();
         } else {
@@ -108,13 +116,5 @@ public class CardReaderDirector {
                                                                                    this.externalCardReaderHelper);
         this.cardReaderManager.setCardReaderRequestType(this.cardReaderRequest);
         this.cardReaderManager.startCardReader();
-    }
-
-    private Boolean isCardReaderDeviceManagerConnected() {
-        return this.cardReaderManager != null && this.cardReaderManager.isConnected();
-    }
-
-    private Boolean isCardReaderDeviceManagerSearching() {
-        return this.cardReaderManager != null && this.cardReaderManager.isSearching();
     }
 }

@@ -12,17 +12,17 @@ import com.roam.roamreaderunifiedapi.callback.AudioJackPairingListenerWithDevice
 import com.roam.roamreaderunifiedapi.callback.CalibrationListener;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
 import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
+import com.roam.roamreaderunifiedapi.callback.ReleaseHandler;
 import com.roam.roamreaderunifiedapi.callback.SearchListener;
 import com.roam.roamreaderunifiedapi.constants.CalibrationResult;
 import com.roam.roamreaderunifiedapi.constants.Command;
+import com.roam.roamreaderunifiedapi.constants.CommunicationType;
 import com.roam.roamreaderunifiedapi.constants.DeviceStatus;
 import com.roam.roamreaderunifiedapi.constants.DeviceType;
 import com.roam.roamreaderunifiedapi.constants.ErrorCode;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
-import com.roam.roamreaderunifiedapi.constants.CommunicationType;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
-import com.roam.roamreaderunifiedapi.callback.ReleaseHandler;
 import com.roam.roamreaderunifiedapi.data.Device;
 import com.wepay.android.models.MockConfig;
 
@@ -127,20 +127,25 @@ public class MockRoamDeviceManager implements DeviceManager{
      */
     @Override
     public boolean release() {
-        if (deviceStatusHandler != null) {
-            runOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    deviceStatusHandler.onDisconnected();
-                }
-            }, READER_RELEASE_TIME_MS);
-        }
+        this.release(null);
         return true;
     }
 
     @Override
-    public void release(ReleaseHandler releaseHandler) {
-        this.release();
+    public void release(final ReleaseHandler releaseHandler) {
+        if (deviceStatusHandler != null) {
+            runOnMainThread(new Runnable() {
+                @Override
+                public void run() {
+                    // call done on releasehandler
+                    if (releaseHandler != null) {
+                        releaseHandler.done();
+                    }
+
+                    deviceStatusHandler.onDisconnected();
+                }
+            }, READER_RELEASE_TIME_MS);
+        }
     }
 
     @Override

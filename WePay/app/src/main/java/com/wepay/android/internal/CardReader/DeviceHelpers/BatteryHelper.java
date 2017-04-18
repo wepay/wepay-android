@@ -1,7 +1,6 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
 import android.os.Handler;
-import android.util.Log;
 
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
@@ -14,6 +13,7 @@ import com.roam.roamreaderunifiedapi.constants.ProgressMessage;
 import com.roam.roamreaderunifiedapi.constants.ResponseCode;
 import com.roam.roamreaderunifiedapi.data.CalibrationParameters;
 import com.wepay.android.BatteryLevelHandler;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -66,14 +66,14 @@ public class BatteryHelper implements DeviceResponseHandler, DeviceStatusHandler
                 //do nothing
                 break;
             default:
-                Log.d("wepay_sdk", "BatteryHelper.onProgress ignoring message: " + message.toString() + " - " + additionalMessage);
+                LogHelper.log("BatteryHelper.onProgress ignoring message: " + message.toString() + " - " + additionalMessage);
                 // nothing to do here
         }
     }
 
     @Override
     public void onResponse(Map<Parameter, Object> data) {
-        Log.d("wepay_sdk", "Command response: \n" + data.toString());
+        LogHelper.log("Command response: \n" + data.toString());
 
         Command cmd = (Command) data.get(Parameter.Command);
         ResponseCode responseCode = (ResponseCode) data.get(Parameter.ResponseCode);
@@ -87,7 +87,7 @@ public class BatteryHelper implements DeviceResponseHandler, DeviceStatusHandler
                     this.batteryLevelHandler.onBatteryLevel(batteryLevel);
                     break;
                 default:
-                    Log.d("wepay_sdk","BatteryHelper.onResponse unexpected command :" + cmd.toString());
+                    LogHelper.log("BatteryHelper.onResponse unexpected command :" + cmd.toString());
                     this.batteryLevelHandler.onBatteryLevelError(Error.getFailedToGetBatteryLevelError());
                     break;
             }
@@ -154,7 +154,7 @@ public class BatteryHelper implements DeviceResponseHandler, DeviceStatusHandler
 
     @Override
     public void onError(String s) {
-        Log.d("wepay_sdk","BatteryHelper.onError :" +s);
+        LogHelper.log("BatteryHelper.onError :" +s);
         if (this.batteryLevelHandler != null) {
             this.batteryLevelHandler.onBatteryLevelError(Error.getCardReaderUnknownError());
             cleanup();

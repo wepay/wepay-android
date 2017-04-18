@@ -86,7 +86,13 @@ public enum ErrorCode {
     INVALID_CARD_READER_SELECTION(10039),
 
     /** The card reader battery too low error. */
-    CARD_READER_BATTERY_TOO_LOW(10040);
+    CARD_READER_BATTERY_TOO_LOW(10040),
+
+    /**
+     * Unable to connect to card reader. It may not be a supported model or it
+     * could be that the plugged in headphone jack card reader has insufficient battery.
+     */
+    CARD_READER_UNABLE_TO_CONNECT(10041);
 
     /** The code. */
     private final int code;
@@ -168,6 +174,8 @@ public enum ErrorCode {
                 return "INVALID_CARD_READER_SELECTION";
             case 10040:
                 return "CARD_READER_BATTERY_TOO_LOW";
+            case 10041:
+                return "CARD_READER_UNABLE_TO_CONNECT";
         default:
             return "UNDEFINED_ERROR";
         }

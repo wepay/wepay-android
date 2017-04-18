@@ -4,10 +4,10 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.test.InstrumentationRegistry;
-import android.util.Log;
 
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.PaymentMethod;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -465,14 +465,14 @@ public class IntegrationTestConfig {
             @Override
             public void onSuccess(PaymentInfo paymentInfo) {
                 super.onSuccess(paymentInfo);
-                Log.d("restartTestHelper", paymentInfo.toString());
+                LogHelper.log(paymentInfo.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onError(com.wepay.android.models.Error error) {
                 super.onError(error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
 
@@ -480,7 +480,7 @@ public class IntegrationTestConfig {
             public void onStatusChange(CardReaderStatus status) {
                 super.onStatusChange(status);
                 statuses.add(status);
-                Log.d("restartTestHelper", status.toString());
+                LogHelper.log(status.toString());
                 countDownLatch.countDown();
             }
         };
@@ -489,14 +489,14 @@ public class IntegrationTestConfig {
             @Override
             public void onSuccess(PaymentInfo paymentInfo, PaymentToken token) {
                 super.onSuccess(paymentInfo, token);
-                Log.d("restartTestHelper", token.toString());
+                LogHelper.log(token.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onError(PaymentInfo paymentInfo, com.wepay.android.models.Error error) {
                 super.onError(paymentInfo, error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
         };
@@ -506,14 +506,14 @@ public class IntegrationTestConfig {
             @Override
             public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
                 super.onAuthorizationSuccess(paymentInfo, authorizationInfo);
-                Log.d("restartTestHelper", authorizationInfo.toString());
+                LogHelper.log(authorizationInfo.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
                 super.onAuthorizationError(paymentInfo, error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
         };
@@ -541,7 +541,7 @@ public class IntegrationTestConfig {
 
         // Copy the status list to avoid printing the status list at the same time it's modified.
         statusesCopy = new ArrayList<>(statuses);
-        Log.d("restartTestHelper", "statuses: " + statusesCopy.toString());
+        LogHelper.log("statuses: " + statusesCopy.toString());
 
         if (shouldSucceed) {
             Assert.assertTrue(cardReaderHandler.onSuccessCalled);

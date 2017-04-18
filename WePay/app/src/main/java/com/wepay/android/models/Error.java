@@ -5,7 +5,6 @@ package com.wepay.android.models;
 
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.enums.ErrorCode;
@@ -419,6 +418,15 @@ public class Error extends Exception {
      */
     public static Error getCardReaderBatteryTooLowError() {
         return new Error(ErrorCode.CARD_READER_BATTERY_TOO_LOW.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "The card reader battery does not have enough charge. Please charge before using.");
+    }
+
+    /** \internal
+     * Instantiates an unable to connect to card reader error.
+     *
+     * @return the unable to connect to card reader error
+     */
+    public static Error getCardReaderUnableToConnectError() {
+        return new Error(ErrorCode.CARD_READER_UNABLE_TO_CONNECT.getCode(), ERROR_DOMAIN_SDK, ERROR_CATEGORY_CARD_READER, "Please make sure you’re using a supported card reader and that it is fully charged.");
     }
 
     public static Error getErrorWithCardReaderResponseData(Map<Parameter, Object> data) {
