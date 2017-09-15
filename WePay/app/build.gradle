@@ -1,5 +1,5 @@
 apply plugin: 'com.android.library'
-group= 'com.wepay.android'
+group= 'com.infusionsoft.wepay.android'
 
 android {
     compileSdkVersion 23
@@ -53,14 +53,14 @@ configurations {
 dependencies {
     compile 'com.android.support:support-v4:23.2.0'
     compile 'com.google.code.gson:gson:2.6.2'
-
-    compile files('libs/android-async-http-1.4.5.jar')
-    compile fileTree(dir: 'libs/internal', include: ['*.jar'])
+    compile 'com.squareup.okhttp3:okhttp:3.3.1'
+    compile 'com.squareup.okhttp3:logging-interceptor:3.3.1'
+    //compile files('libs/android-async-http-1.4.5.jar')
+    //javadocDeps files('libs/android-async-http-1.4.5.jar')
+    compile files('libs/internal/roam.jar')
+    compile files('libs/internal/TrustDefenderMobile_NoLog-3.2-103.jar')
     androidTestCompile 'com.android.support.test:runner:0.5'
-
     javadocDeps 'com.google.code.gson:gson:2.6.2'
-    javadocDeps files('libs/android-async-http-1.4.5.jar')
-
     javadocDeps fileTree(dir: 'libs/internal', include: ['*.jar'])
 }
 

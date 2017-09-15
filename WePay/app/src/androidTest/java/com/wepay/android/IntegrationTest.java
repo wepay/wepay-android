@@ -9,7 +9,6 @@ import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
-
 import com.roam.roamreaderunifiedapi.constants.ErrorCode;
 import com.wepay.android.enums.CalibrationResult;
 import com.wepay.android.enums.CardReaderStatus;
@@ -24,18 +23,15 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.MockConfig;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
-
-import junit.framework.Assert;
-
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import junit.framework.Assert;
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class IntegrationTest {
@@ -922,202 +918,6 @@ public class IntegrationTest {
                 super.onSuccess(paymentInfo);
                 wePay.getCardReaderBatteryLevel(this, batteryLevelHandler);
                 countDownLatch.countDown();
-            }
-        };
-
-        runTestOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                wePay.startTransactionForTokenizing(cardReaderHandler, new TestTokenizationHandler(countDownLatch), new TestAuthorizationHandler(countDownLatch));
-            }
-        });
-        // Since configured to stop, we will go through discovery twice. The Long wait time is to
-        // account for the successful transaction time.
-        countDownLatch.await(DISCOVERY_TIME_MS + DISCOVERY_TIME_MS + WAIT_TIME_LONG_MS, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(cardReaderHandler.onCardReaderSelectionCalled);
-        Assert.assertTrue(cardReaderHandler.onSuccessCalled);
-        Assert.assertFalse(cardReaderHandler.onErrorCalled);
-        Assert.assertFalse(batteryLevelHandler.onBatteryLevelErrorCalled);
-        Assert.assertTrue(batteryLevelHandler.onBatteryLevelCalled);
-    }
-
-    @Test
-    public void testBatteryInfoErrorAfterTransaction_StopAfterOperationTrue() throws InterruptedException {
-        Config config = getConfig();
-        config.setStopCardReaderAfterOperation(true);
-        config.getMockConfig().setBatteryLevelError(true);
-
-        final WePay wePay = new WePay(config);
-        final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final TestBatteryLevelHandler batteryLevelHandler = new TestBatteryLevelHandler(countDownLatch) {
-            @Override
-            public void onBatteryLevelError(Error error) {
-                super.onBatteryLevelError(error);
-                countDownLatch.countDown();
-            }
-        };
-        final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
-            @Override
-            public void onSuccess(PaymentInfo paymentInfo) {
-                super.onSuccess(paymentInfo);
-                countDownLatch.countDown();
-                wePay.getCardReaderBatteryLevel(this, batteryLevelHandler);
-            }
-        };
-
-        runTestOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                wePay.startTransactionForTokenizing(cardReaderHandler, new TestTokenizationHandler(countDownLatch), new TestAuthorizationHandler(countDownLatch));
-            }
-        });
-
-        // Since configured to stop, we will go through discovery twice. The Long wait time is to
-        // account for the successful transaction time.
-        countDownLatch.await(DISCOVERY_TIME_MS + DISCOVERY_TIME_MS + WAIT_TIME_LONG_MS, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(cardReaderHandler.onCardReaderSelectionCalled);
-        Assert.assertTrue(cardReaderHandler.onSuccessCalled);
-        Assert.assertFalse(cardReaderHandler.onErrorCalled);
-        Assert.assertTrue(batteryLevelHandler.onBatteryLevelErrorCalled);
-        Assert.assertFalse(batteryLevelHandler.onBatteryLevelCalled);
-    }
-
-    @Test
-    public void testBatteryLevelTooLow() throws InterruptedException {
-        Config config = getConfig();
-        MockRoamDeviceManager deviceManager = MockRoamDeviceManager.getDeviceManager();
-        final MockRoamTransactionManager transactionManager = (MockRoamTransactionManager) deviceManager.getTransactionManager();
-        final WePay wePay = new WePay(config);
-        final CountDownLatch countDownLatch = new CountDownLatch(1);
-
-        config.getMockConfig().setCardReadFailure(true);
-
-        final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
-            @Override
-            public void onStatusChange(CardReaderStatus status) {
-                super.onStatusChange(status);
-                if (status.equals(CardReaderStatus.CHECKING_READER)) {
-                    transactionManager.mockCommandErrorCode = ErrorCode.BatteryTooLowError;
-                }
-            }
-
-            @Override
-            public void onError(Error error) {
-                super.onError(error);
-                if (error.equals(Error.getCardReaderBatteryTooLowError())) {
-                    countDownLatch.countDown();
-                }
-            }
-        };
-
-        runTestOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                wePay.startTransactionForReading(cardReaderHandler);
-            }
-        });
-
-        countDownLatch.await(WAIT_TIME_MED_MS, TimeUnit.MILLISECONDS);
-        Assert.assertEquals(0, countDownLatch.getCount());
-    }
-
-    @Test
-    public void testBatteryInfoSuccessAfterTransaction_StopAfterOperationFalse() throws InterruptedException {
-        Config config = getConfig();
-        config.setStopCardReaderAfterOperation(false);
-
-        final WePay wePay = new WePay(config);
-        final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final TestBatteryLevelHandler batteryLevelHandler = new TestBatteryLevelHandler(countDownLatch) {
-            @Override
-            public void onBatteryLevel(int batteryLevel) {
-                super.onBatteryLevel(batteryLevel);
-                countDownLatch.countDown();
-            }
-        };
-        final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
-            @Override
-            public void onSuccess(PaymentInfo paymentInfo) {
-                super.onSuccess(paymentInfo);
-                countDownLatch.countDown();
-                wePay.getCardReaderBatteryLevel(this, batteryLevelHandler);
-            }
-        };
-
-        runTestOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                wePay.startTransactionForTokenizing(cardReaderHandler, new TestTokenizationHandler(countDownLatch), new TestAuthorizationHandler(countDownLatch));
-            }
-        });
-
-        countDownLatch.await(WAIT_TIME_MED_MS, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(cardReaderHandler.onCardReaderSelectionCalled);
-        Assert.assertTrue(cardReaderHandler.onSuccessCalled);
-        Assert.assertFalse(cardReaderHandler.onErrorCalled);
-        Assert.assertFalse(batteryLevelHandler.onBatteryLevelErrorCalled);
-        Assert.assertTrue(batteryLevelHandler.onBatteryLevelCalled);
-    }
-
-    @Test
-    public void testBatteryInfoErrorAfterTransaction_StopAfterOperationFalse() throws InterruptedException {
-        Config config = getConfig();
-        config.setStopCardReaderAfterOperation(false);
-        config.getMockConfig().setBatteryLevelError(true);
-
-        final WePay wePay = new WePay(config);
-        final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final TestBatteryLevelHandler batteryLevelHandler = new TestBatteryLevelHandler(countDownLatch) {
-            @Override
-            public void onBatteryLevelError(Error error) {
-                super.onBatteryLevelError(error);
-                countDownLatch.countDown();
-            }
-        };
-        final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
-            @Override
-            public void onSuccess(PaymentInfo paymentInfo) {
-                super.onSuccess(paymentInfo);
-                countDownLatch.countDown();
-                wePay.getCardReaderBatteryLevel(this, batteryLevelHandler);
-            }
-        };
-
-        runTestOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                wePay.startTransactionForTokenizing(cardReaderHandler, new TestTokenizationHandler(countDownLatch), new TestAuthorizationHandler(countDownLatch));
-            }
-        });
-
-        countDownLatch.await(WAIT_TIME_MED_MS, TimeUnit.MILLISECONDS);
-        Assert.assertTrue(cardReaderHandler.onCardReaderSelectionCalled);
-        Assert.assertTrue(cardReaderHandler.onSuccessCalled);
-        Assert.assertFalse(cardReaderHandler.onErrorCalled);
-        Assert.assertTrue(batteryLevelHandler.onBatteryLevelErrorCalled);
-        Assert.assertFalse(batteryLevelHandler.onBatteryLevelCalled);
-    }
-
-    @Test
-    public void testBatteryInfoSuccessAfterTransaction_StopAfterOperationTrue() throws InterruptedException {
-        Config config = getConfig();
-        config.setStopCardReaderAfterOperation(true);
-
-        final WePay wePay = new WePay(config);
-        final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final TestBatteryLevelHandler batteryLevelHandler = new TestBatteryLevelHandler(countDownLatch) {
-            @Override
-            public void onBatteryLevel(int batteryLevel) {
-                super.onBatteryLevel(batteryLevel);
-                countDownLatch.countDown();
-            }
-        };
-        final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
-            @Override
-            public void onSuccess(PaymentInfo paymentInfo) {
-                super.onSuccess(paymentInfo);
-                countDownLatch.countDown();
-                wePay.getCardReaderBatteryLevel(this, batteryLevelHandler);
             }
         };
 

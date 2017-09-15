@@ -2,7 +2,6 @@ package com.wepay.android.internal.CardReader.DeviceManagers;
 
 import android.os.Handler;
 import android.util.Log;
-
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
 import com.roam.roamreaderunifiedapi.callback.DeviceResponseHandler;
@@ -34,7 +33,6 @@ import com.wepay.android.internal.SharedPreferencesHelper;
 import com.wepay.android.internal.mock.MockRoamDeviceManager;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -228,7 +226,6 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         return this.isConnected && roamDeviceManager != null;
     }
 
-    @Override
     public Boolean isSearching() {
         return this.isSearching;
     }

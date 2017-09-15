@@ -1,6 +1,5 @@
 package com.wepay.android.internal.CardReader.Utilities;
 
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.TokenizationHandler;
@@ -11,17 +10,15 @@ import com.wepay.android.internal.CardReader.DeviceHelpers.RoamHelper;
 import com.wepay.android.internal.CardReaderDirector;
 import com.wepay.android.internal.RiskHelper;
 import com.wepay.android.internal.WepayClient;
+import com.wepay.android.internal.WepayClient.HttpResponseHandler;
 import com.wepay.android.internal.WepayClientHelper;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
-
-import org.apache.http.Header;
-import org.json.JSONObject;
-
 import java.math.BigDecimal;
 import java.util.Map;
+import org.json.JSONObject;
 
 /**
  * Responsible for processing WePay's PaymentInfo. TransactionUtilities is the class that primarily
@@ -146,14 +143,14 @@ public class TransactionUtilities {
 
                             // authorize
                             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, riskHelper.getSessionId(), model, amount, currencyCode, accountId, fallback);
-                            WepayClient.creditCardCreateEMV(config, paramMap, new JsonHttpResponseHandler() {
+                            WepayClient.creditCardCreateEMV(config, paramMap, new HttpResponseHandler() {
                                 @Override
-                                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                                public void onSuccess(int statusCode, JSONObject response) {
                                     responseHandler.onSuccess(response);
                                 }
 
                                 @Override
-                                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                                public void onFailure(int statusCode, JSONObject errorResponse, Throwable throwable) {
                                     if (errorResponse != null) {
                                         responseHandler.onFailure(new Error(errorResponse, throwable));
                                     } else {
@@ -176,14 +173,14 @@ public class TransactionUtilities {
     public void issueReversal(Long creditCardId, Long accountId, Map<Parameter, Object> cardInfo) {
         Map<String, Object> paramMap = WepayClientHelper.getReversalRequestParams(creditCardId, accountId, cardInfo);
 
-        WepayClient.creditCardAuthReverse(this.config, paramMap, new JsonHttpResponseHandler() {
+        WepayClient.creditCardAuthReverse(this.config, paramMap, new HttpResponseHandler() {
             @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+            public void onSuccess(int statusCode, JSONObject response) {
                 // do nothing
             }
 
             @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+            public void onFailure(int statusCode, JSONObject errorResponse, Throwable throwable) {
                 // do nothing
             }
         });
@@ -227,9 +224,9 @@ public class TransactionUtilities {
             // tokenize
             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, riskHelper.getSessionId(), model, amount, currencyCode, accountId, fallback);
 
-            WepayClient.creditCardCreateSwipe(this.config, paramMap, new JsonHttpResponseHandler() {
+            WepayClient.creditCardCreateSwipe(this.config, paramMap, new HttpResponseHandler() {
                 @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                public void onSuccess(int statusCode, JSONObject response) {
                     String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
                     PaymentToken token = new PaymentToken(tokenId);
 
@@ -238,8 +235,7 @@ public class TransactionUtilities {
                 }
 
                 @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-
+                public void onFailure(int statusCode, JSONObject errorResponse, Throwable throwable) {
                     Error error = (errorResponse == null) ? Error.getNoDataReturnedError() : new Error(errorResponse, throwable);
                     externalCardReaderHelper.informExternalCardReaderError(paymentInfo, error);
                     responseHandler.onFailure(error);

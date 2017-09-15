@@ -2,18 +2,14 @@ package com.wepay.android.internal;
 
 import android.graphics.Bitmap;
 import android.util.Base64;
-
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.wepay.android.CheckoutHandler;
+import com.wepay.android.internal.WepayClient.HttpResponseHandler;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
-
-import org.apache.http.Header;
-import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import org.json.JSONObject;
 
 /**
  * Created by chaitanya.bagaria on 1/10/16.
@@ -80,9 +76,9 @@ public class CheckoutHelper {
             Map<String, Object> paramMap = getSignatureParamMap(encodedImage, checkoutId);
 
             // make the client call
-            WepayClient.checkoutSignatureCreate(this.config, paramMap, new JsonHttpResponseHandler() {
+            WepayClient.checkoutSignatureCreate(this.config, paramMap, new HttpResponseHandler() {
                 @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                public void onSuccess(int statusCode, JSONObject response) {
                     // extract signature url
                     String signatureUrl = response.isNull("signature_url") ? null : response.optString("signature_url");
 
@@ -93,7 +89,7 @@ public class CheckoutHelper {
                 }
 
                 @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                public void onFailure(int statusCode, JSONObject errorResponse, Throwable throwable) {
                     com.wepay.android.models.Error error;
 
                     if (errorResponse != null) {
