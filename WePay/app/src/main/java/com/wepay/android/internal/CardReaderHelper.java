@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.landicorp.emv.comm.api.CommParameter;
 import com.landicorp.robert.comm.setting.AudioCommParam;
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.roam.roamreaderunifiedapi.DeviceManager;
 import com.roam.roamreaderunifiedapi.RoamReaderUnifiedAPI;
 import com.roam.roamreaderunifiedapi.callback.DeviceStatusHandler;
@@ -26,7 +25,6 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
 
-import org.apache.http.Header;
 import org.json.JSONObject;
 
 import java.util.Map;
@@ -303,14 +301,14 @@ public class CardReaderHelper implements DeviceStatusHandler, DeviceManagerDeleg
 
                             // authorize
                             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, sessionId, model, amount, currencyCode, accountId, fallback);
-                            WepayClient.post(config, "credit_card/create_emv", paramMap, new JsonHttpResponseHandler() {
+                            WepayClient.post(config, "credit_card/create_emv", paramMap, new WepayClient.ResponseHandler() {
                                 @Override
-                                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                                public void onSuccess(int statusCode, JSONObject response) {
                                     authResponseHandler.onSuccess(response);
                                 }
 
                                 @Override
-                                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                                public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                                     if (errorResponse != null) {
                                         authResponseHandler.onFailure(new Error(errorResponse, throwable));
                                     } else {
@@ -330,14 +328,14 @@ public class CardReaderHelper implements DeviceStatusHandler, DeviceManagerDeleg
     public void issueReversal(Long creditCardId, Long accountId, Map<Parameter, Object> cardInfo) {
         Map<String, Object> paramMap = WepayClientHelper.getReversalRequestParams(creditCardId, accountId, cardInfo);
 
-        WepayClient.post(this.config, "credit_card/auth_reverse", paramMap, new JsonHttpResponseHandler() {
+        WepayClient.post(this.config, "credit_card/auth_reverse", paramMap, new WepayClient.ResponseHandler() {
             @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+            public void onSuccess(int statusCode, JSONObject response) {
                 // do nothing
             }
 
             @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+            public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                 // do nothing
             }
         });
@@ -416,9 +414,9 @@ public class CardReaderHelper implements DeviceStatusHandler, DeviceManagerDeleg
             // tokenize
             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, sessionId, model, amount, currencyCode, accountId, fallback);
 
-            WepayClient.post(this.config, "credit_card/create_swipe", paramMap, new JsonHttpResponseHandler() {
+            WepayClient.post(this.config, "credit_card/create_swipe", paramMap, new WepayClient.ResponseHandler() {
                 @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                public void onSuccess(int statusCode, JSONObject response) {
                     String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
                     PaymentToken token = new PaymentToken(tokenId);
 
@@ -426,7 +424,7 @@ public class CardReaderHelper implements DeviceStatusHandler, DeviceManagerDeleg
                 }
 
                 @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                     if (errorResponse != null) {
                         final Error error = new Error(errorResponse, throwable);
                         externalCardReaderHelper.informExternalCardReaderError(paymentInfo, error);

@@ -1,3 +1,7 @@
+2017-09-25
+* Released version 1.0.1
+* Replace AsyncHttpClient with Volley
+
 2016-05-31
 * Released version 1.0.0
 * SDK frameworks files are available in /WePayExample/app/libs

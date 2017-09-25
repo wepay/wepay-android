@@ -10,7 +10,7 @@ android {
         minSdkVersion 8
         targetSdkVersion 23
         versionCode 1
-        versionName 'v1.0.0'
+        versionName '1.0.1'
         project.archivesBaseName = "wepay-android"
         project.version = android.defaultConfig.versionName
     }
@@ -43,12 +43,11 @@ configurations {
 dependencies {
     compile 'com.android.support:support-v4:23.2.0'
     compile 'com.google.code.gson:gson:2.6.2'
-    compile files('libs/android-async-http-1.4.5.jar')
+    compile files('libs/volley-1.0.0.jar')
     compile fileTree(dir: 'libs/internal', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
 
     javadocDeps 'com.google.code.gson:gson:2.6.2'
-    javadocDeps files('libs/android-async-http-1.4.5.jar')
 
     javadocDeps fileTree(dir: 'libs/internal', include: ['*.jar'])
 }

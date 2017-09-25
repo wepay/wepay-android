@@ -1,26 +1,32 @@
-/*
- * 
- */
 package com.wepay.android.internal;
 
-import com.google.gson.Gson;
-import com.loopj.android.http.AsyncHttpClient;
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.RequestParams;
-import com.wepay.android.models.Config;
+import android.content.Context;
+import android.util.Log;
 
-import org.apache.http.entity.StringEntity;
+import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.wepay.android.models.Config;
+import com.wepay.android.models.Error;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * The Class WepayClient.
  */
 public class WepayClient {
-
     /** The Constant BASE_URL_STAGE. */
     private static final String BASE_URL_STAGE = "https://stage.wepayapi.com/v2/";
 
@@ -31,62 +37,138 @@ public class WepayClient {
     private static final String WEPAY_API_VERSION = "2016-03-30";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v1.0.0";
+    private static final String USER_AGENT = "WePay Android SDK v1.0.1";
 
-    /** The client. */
-    private static AsyncHttpClient client = new AsyncHttpClient();
+    /** The request queue */
+    private static RequestQueue requestQueue = null;
 
     /**
-     * Gets the.
+     * Get the request.
      *
      * @param config the config
      * @param url the url
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void get(Config config, String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {
-        client.setUserAgent(USER_AGENT);
-        client.addHeader("Api-Version", WEPAY_API_VERSION);
-
-        params.put("client_id", config.getClientId());
-        String abs = getAbsoluteUrl(config, url);
-
-        client.get(abs, params, responseHandler);
+    public static void get(Config config, String url, Map<String, Object> params, ResponseHandler responseHandler) {
+        makeRequest(url, Request.Method.GET, config, params, responseHandler);
     }
 
     /**
-     * Post.
+     * Post the request.
      *
      * @param config the config
      * @param url the url
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void post(Config config, String url, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
-        String contentType = "application/json";
-        client.setUserAgent(USER_AGENT);
-        client.addHeader("Api-Version", WEPAY_API_VERSION);
+    public static void post(Config config, String url, Map<String, Object> params, final ResponseHandler responseHandler) {
+        makeRequest(url, Request.Method.POST, config, params, responseHandler);
+    }
+
+    private static void makeRequest(String url, int method, Config config, Map<String, Object> params, final ResponseHandler responseHandler) {
+        String fullUrl = getAbsoluteUrl(config, url);
+        JSONObject requestBody = null;
+
+        if (requestQueue == null) {
+            init(config.getContext());
+        }
 
         params.put("client_id", config.getClientId());
-        JSONObject jsonParams = null;
+
         try {
-            jsonParams = new JSONObject(new Gson().toJson(params));
+            requestBody = new JSONObject(new Gson().toJson(params));
         } catch (JSONException e) {
-            e.printStackTrace();
-            // Do nothing, the http library will throw an appropriate error
+            Log.e("wepay_sdk", "Error: Unable to serialize request params to JSON. Params: " + params.toString() + ". Failure: " + e.getLocalizedMessage());
         }
 
-        StringEntity entity = null;
+        // Create the response listener.
+        Response.Listener<JSONObject> responseListener = new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                responseHandler.onSuccess(200, response);
+            }
+        };
 
-        String abs = getAbsoluteUrl(config, url);
+        // Create the error listener
+        Response.ErrorListener errorListener =  new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                JSONObject response = new JSONObject();
+                String errorResponse = "";
 
-        try {
-            entity = new StringEntity(jsonParams.toString());
-        } catch (UnsupportedEncodingException e) {
-            // Do nothing, the http library will throw an appropriate error
-        }
+                if (error.networkResponse != null) {
+                    try {
+                        errorResponse = new String(error.networkResponse.data, HttpHeaderParser.parseCharset(error.networkResponse.headers));
+                        response = new JSONObject(errorResponse);
+                    } catch (UnsupportedEncodingException e) {
+                        Log.e("wepay_sdk", "Error: Unable to convert error response to string. Failure: " + e.getLocalizedMessage());
+                    } catch (JSONException e) {
+                        Log.e("wepay_sdk", "Error: Unable to serialize response " + errorResponse + " into JSON. Failure: " + e.getLocalizedMessage());
+                    }
 
-        client.post(config.getContext(), abs, entity, contentType, responseHandler);
+                    responseHandler.onFailure(error.networkResponse.statusCode, error.getCause(), response);
+                } else {
+                    Integer errorCode = 500;
+                    String errorDescription = null;
+
+                    try {
+                        response.put("error_code", errorCode);
+                        response.put("error_domain", Error.ERROR_DOMAIN_API);
+                        response.put("error", Error.ERROR_CATEGORY_API);
+
+                        if (error.getCause() != null) {
+                            errorDescription = error.getCause().getLocalizedMessage();
+                            response.put("error_description", errorDescription);
+                        }
+                    } catch (JSONException e) {
+                        Log.e("wepay_sdk", "Error: unable to populate error response. Caught exception: " + e.getLocalizedMessage());
+                    }
+
+                    Log.d("wepay_sdk", "Received error response, but response contains no data.");
+                    Log.d("wepay_sdk", "Error response class: " + error.getClass().toString());
+
+                    if (errorDescription != null) {
+                        Log.d("wepay_sdk", "Error response description: " + errorDescription);
+                    }
+
+                    responseHandler.onFailure(errorCode, error.getCause(), response);
+                }
+            }
+        };
+
+        // Create a JSON Request with some of the methods overwritten.
+        JsonObjectRequest request = new JsonObjectRequest(method, fullUrl, requestBody, responseListener, errorListener) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+
+                headers.put("User-Agent", USER_AGENT);
+                headers.put("Api-Version", WEPAY_API_VERSION);
+
+                return headers;
+            }
+
+            @Override
+            protected Response<JSONObject> parseNetworkResponse(NetworkResponse response) {
+                try {
+                    String rawJSON = new String (response.data, HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
+                    JSONObject responseJSON = new JSONObject(rawJSON);
+                    responseJSON.put("headers", new JSONObject(response.headers));
+
+                    return Response.success(responseJSON, HttpHeaderParser.parseCacheHeaders(response));
+                } catch (UnsupportedEncodingException e) {
+                    Log.e("wepay_sdk", "Error: Unable to parse header data into string.");
+                } catch (JSONException e) {
+                    Log.e("wepay_sdk", "Error: Unable to serialize string into JSON object.");
+                }
+
+                return super.parseNetworkResponse(response);
+            }
+        };
+
+        request.setShouldCache(false);
+        requestQueue.add(request);
     }
 
     /**
@@ -96,7 +178,7 @@ public class WepayClient {
      * @param relativeUrl the relative url
      * @return the absolute url
      */
-    private static String getAbsoluteUrl(Config config, String relativeUrl) {
+    static String getAbsoluteUrl(Config config, String relativeUrl) {
         String environment = config.getEnvironment();
 
         if (environment.equalsIgnoreCase(Config.ENVIRONMENT_STAGE)) {
@@ -106,5 +188,14 @@ public class WepayClient {
         } else {
             return environment + relativeUrl;
         }
+    }
+
+    private static void init(Context context) {
+        requestQueue = Volley.newRequestQueue(context);
+    }
+
+    public interface ResponseHandler {
+        void onSuccess(int statusCode, JSONObject response);
+        void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse);
     }
 }
