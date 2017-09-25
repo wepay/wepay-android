@@ -1,5 +1,5 @@
 apply plugin: 'com.android.library'
-group= 'com.infusionsoft.wepay.android'
+group= 'com.wepay.android'
 
 android {
     compileSdkVersion 23
