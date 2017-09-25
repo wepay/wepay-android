@@ -1,3 +1,7 @@
+2017-09-25
+* Released version 2.0.1
+* Replace AsyncHttpClient with Volley
+
 2016-11-16
 * Released version 2.0.0
 * CardReaderTransactionInfoCallback.useTransactionInfo() and AuthorizationInfo.getAuthorizedAmount() now use BigDecimal instead of double for amount
