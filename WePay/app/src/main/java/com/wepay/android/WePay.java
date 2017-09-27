@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.internal.CardReaderDirector;
 import com.wepay.android.internal.CheckoutHelper;
@@ -21,7 +20,6 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
 
-import org.apache.http.Header;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -224,9 +222,9 @@ public class WePay {
                 if (paymentInfo.getPaymentMethod() == PaymentMethod.MANUAL) {
                     Map<String, Object> paramMap = getManualParamMap(paymentInfo, sessionId);
 
-                    WepayClient.creditCardCreate(config, paramMap, new JsonHttpResponseHandler() {
+                    WepayClient.creditCardCreate(config, paramMap, new WepayClient.ResponseHandler() {
                         @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        public void onSuccess(int statusCode, JSONObject response) {
 
                             String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
                             PaymentToken token = new PaymentToken(tokenId);
@@ -235,7 +233,7 @@ public class WePay {
                         }
 
                         @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                        public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                             if (errorResponse != null) {
                                 final Error error = new Error(errorResponse, throwable);
                                 tokenizationHandler.onError(paymentInfo, error);
@@ -270,22 +268,6 @@ public class WePay {
                 checkoutHelper.storeSignatureImage(image, checkoutId, checkoutHandler);
             }
         });
-    }
-
-    /**
-     * Use this method to get the name of the most recently used card reader.
-     *
-     * @return the name of the card reader.
-     */
-    public String getRememberedCardReader() {
-        return this.cardReaderDirector.getRememberedCardReader(this.config.getContext());
-    }
-
-    /**
-     * Use this method to clear the name of the most recently used card reader.
-     */
-    public void forgetRememberedCardReader() {
-        this.cardReaderDirector.forgetRememberedCardReader(this.config.getContext());
     }
 
     /**

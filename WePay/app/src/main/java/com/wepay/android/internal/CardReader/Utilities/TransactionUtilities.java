@@ -1,6 +1,5 @@
 package com.wepay.android.internal.CardReader.Utilities;
 
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.roam.roamreaderunifiedapi.constants.Parameter;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.TokenizationHandler;
@@ -146,14 +145,14 @@ public class TransactionUtilities {
 
                             // authorize
                             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, riskHelper.getSessionId(), model, amount, currencyCode, accountId, fallback);
-                            WepayClient.creditCardCreateEMV(config, paramMap, new JsonHttpResponseHandler() {
+                            WepayClient.creditCardCreateEMV(config, paramMap, new WepayClient.ResponseHandler() {
                                 @Override
-                                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                                public void onSuccess(int statusCode, JSONObject response) {
                                     responseHandler.onSuccess(response);
                                 }
 
                                 @Override
-                                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                                public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                                     if (errorResponse != null) {
                                         responseHandler.onFailure(new Error(errorResponse, throwable));
                                     } else {
@@ -176,14 +175,14 @@ public class TransactionUtilities {
     public void issueReversal(Long creditCardId, Long accountId, Map<Parameter, Object> cardInfo) {
         Map<String, Object> paramMap = WepayClientHelper.getReversalRequestParams(creditCardId, accountId, cardInfo);
 
-        WepayClient.creditCardAuthReverse(this.config, paramMap, new JsonHttpResponseHandler() {
+        WepayClient.creditCardAuthReverse(this.config, paramMap, new WepayClient.ResponseHandler() {
             @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+            public void onSuccess(int statusCode, JSONObject response) {
                 // do nothing
             }
 
             @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+            public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
                 // do nothing
             }
         });
@@ -227,9 +226,9 @@ public class TransactionUtilities {
             // tokenize
             Map<String, Object> paramMap = WepayClientHelper.getCreditCardParams(paymentInfo, riskHelper.getSessionId(), model, amount, currencyCode, accountId, fallback);
 
-            WepayClient.creditCardCreateSwipe(this.config, paramMap, new JsonHttpResponseHandler() {
+            WepayClient.creditCardCreateSwipe(this.config, paramMap, new WepayClient.ResponseHandler() {
                 @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                public void onSuccess(int statusCode, JSONObject response) {
                     String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
                     PaymentToken token = new PaymentToken(tokenId);
 
@@ -238,7 +237,7 @@ public class TransactionUtilities {
                 }
 
                 @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
 
                     Error error = (errorResponse == null) ? Error.getNoDataReturnedError() : new Error(errorResponse, throwable);
                     externalCardReaderHelper.informExternalCardReaderError(paymentInfo, error);

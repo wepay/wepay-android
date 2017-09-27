@@ -451,10 +451,6 @@ this.wepay.getCardReaderBatteryLevel(this);
 
 The experiences described above can be modified by utilizing the configuration options available on the Config object. Detailed descriptions for each configurable property is available in the documentation for Config.
 
-### Configuring the SDK
-
-The experiences described above can be modified by utilizing the configuration options available on the Config object. Detailed descriptions for each configurable property is available in the documentation for Config.
-
 ### Test/develop using mock card reader and mock WepayClient
 
 + To use mock card reader implementation instead of using the real reader, instantiate a MockConfig object and pass it to Config:

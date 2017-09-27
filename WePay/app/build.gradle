@@ -10,7 +10,7 @@ android {
         minSdkVersion 12
         targetSdkVersion 23
         versionCode 1
-        versionName '3.0.0-prerelease-1'
+        versionName '3.0.0-prerelease-2'
         project.archivesBaseName = "wepay-android"
         project.version = android.defaultConfig.versionName
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -54,12 +54,11 @@ dependencies {
     compile 'com.android.support:support-v4:23.2.0'
     compile 'com.google.code.gson:gson:2.6.2'
 
-    compile files('libs/android-async-http-1.4.5.jar')
+    compile files('libs/volley-1.0.0.jar')
     compile fileTree(dir: 'libs/internal', include: ['*.jar'])
     androidTestCompile 'com.android.support.test:runner:0.5'
 
     javadocDeps 'com.google.code.gson:gson:2.6.2'
-    javadocDeps files('libs/android-async-http-1.4.5.jar')
 
     javadocDeps fileTree(dir: 'libs/internal', include: ['*.jar'])
 }

@@ -38,6 +38,7 @@ import com.wepay.android.WePay;
 import com.wepay.android.enums.CalibrationResult;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
+import com.wepay.android.enums.LogLevel;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.CalibrationParameters;
@@ -122,7 +123,11 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole("accountId: " + String.format("%d", accountId));
 
         // Initialize and configure the wepay object with current settings
-        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true).setStopCardReaderAfterOperation(false);
+        Config config = new Config(context, clientId, environment)
+                .setUseLocation(false)
+                .setUseTestEMVCards(true)
+                .setStopCardReaderAfterOperation(false)
+                .setLogLevel(LogLevel.ALL);
         this.wepay = new WePay(config);
     }
 
@@ -263,35 +268,6 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     @Override
     public void onPayerEmailRequested(CardReaderEmailCallback callback) {
         callback.insertPayerEmail("android-example@wepay.com");
-    }
-
-    @Override
-    public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> devices) {
-        LayoutInflater inflater = this.getLayoutInflater();
-        View view = inflater.inflate(R.layout.fragment_available_readers, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(view);
-        builder.setTitle("Discovered devices:");
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                callback.useCardReaderAtIndex(-1);
-            }
-        });
-        list = (ListView) view.findViewById(R.id.available_readers_list);
-        listAdapter = new ArrayAdapter<>(this, R.layout.device_name);
-        list.setAdapter(listAdapter);
-        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                callback.useCardReaderAtIndex(position);
-                deviceSelectionDialog.dismiss();
-
-            }
-        });
-        listAdapter.addAll(devices);
-        deviceSelectionDialog = builder.create();
-        deviceSelectionDialog.show();
     }
 
     /**

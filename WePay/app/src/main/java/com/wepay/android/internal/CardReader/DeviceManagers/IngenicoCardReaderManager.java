@@ -228,11 +228,6 @@ public class IngenicoCardReaderManager implements CardReaderManager,
         return this.isConnected && roamDeviceManager != null;
     }
 
-    @Override
-    public Boolean isSearching() {
-        return this.isSearching;
-    }
-
     /** TransactionDelegate */
 
     @Override
