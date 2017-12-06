@@ -3,6 +3,7 @@ package com.wepay.android.internal;
 import android.content.Context;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -29,7 +30,7 @@ import java.util.Map;
 public class WepayClient {
     /** The Constant BASE_URL_STAGE. */
     private static final String BASE_URL_STAGE = "https://stage.wepayapi.com/v2/";
-
+    
     /** The Constant BASE_URL_PROD. */
     private static final String BASE_URL_PROD = "https://wepayapi.com/v2/";
 
@@ -37,10 +38,13 @@ public class WepayClient {
     private static final String WEPAY_API_VERSION = "2016-03-30";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v3.0.0-prerelease-2";
+    private static final String USER_AGENT = "WePay Android SDK v3.0.0-prerelease-3";
 
     /** The request queue */
     private static RequestQueue requestQueue = null;
+
+    /** The client-side API call timeout duration in milliseconds */
+    private static final int REQUEST_TIMEOUT_MS = 40000;
 
     /**
      * Credit card tokenization, for card information form manual input.
@@ -255,6 +259,7 @@ public class WepayClient {
         };
 
         request.setShouldCache(false);
+        request.setRetryPolicy(new DefaultRetryPolicy(REQUEST_TIMEOUT_MS, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         requestQueue.add(request);
     }
 

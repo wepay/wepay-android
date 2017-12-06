@@ -1,4 +1,8 @@
 2017-09-25
+* Released version 3.0.0-prerelease-3
+* Fixed Volley settings causing card authorization requests to be retried
+
+2017-09-25
 * Released version 3.0.0-prerelease-2
 * Replace AsyncHttpClient with Volley
 
