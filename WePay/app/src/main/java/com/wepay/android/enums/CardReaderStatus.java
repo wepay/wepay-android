@@ -45,7 +45,10 @@ public enum CardReaderStatus {
     AUTHORIZING(12),
 
     /** Swipe error, swipe again. */
-    SWIPE_ERROR_SWIPE_AGAIN(13);
+    SWIPE_ERROR_SWIPE_AGAIN(13),
+
+    /** Searching for a card reader. */
+    SEARCHING_FOR_READER(14);
 
     /** The code. */
     private final int code;
@@ -101,6 +104,8 @@ public enum CardReaderStatus {
                 return "AUTHORIZING";
             case 13:
                 return "SWIPE_ERROR_SWIPE_AGAIN";
+            case 14:
+                return "SEARCHING_FOR_READER";
             default:
                 return "UNDEFINED_CARD_READER_STATUS";
         }

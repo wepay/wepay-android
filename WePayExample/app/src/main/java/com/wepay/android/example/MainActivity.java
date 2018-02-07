@@ -2,6 +2,7 @@ package com.wepay.android.example;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -14,13 +15,17 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AlertDialog;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.ImageButton;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.wepay.android.AuthorizationHandler;
@@ -33,6 +38,7 @@ import com.wepay.android.WePay;
 import com.wepay.android.enums.CalibrationResult;
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.CurrencyCode;
+import com.wepay.android.enums.LogLevel;
 import com.wepay.android.enums.PaymentMethod;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.CalibrationParameters;
@@ -46,12 +52,18 @@ import org.json.JSONObject;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * The Class MainActivity.
  */
 public class MainActivity extends ActionBarActivity implements CardReaderHandler, TokenizationHandler, AuthorizationHandler, CheckoutHandler, CalibrationHandler, BatteryLevelHandler, OnClickListener {
+
+    ListView list;
+    ArrayAdapter<String> listAdapter;
+    AlertDialog deviceSelectionDialog;
 
     TextView tvStatus, tvConsole;
 
@@ -69,14 +81,15 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
 
     long accountId;
 
+    boolean cardReaderStarted;
+
     BigDecimal amount = new BigDecimal("22.61"); // magic success amount
 
     public static final String TAG = "wepay_sdk";
 
-    private static final int REQUEST_AUDIO = 0;
+    private static final int REQUEST_PERMISSION = 1;
 
-    Boolean isFirstAskForAudioPermission = true;
-
+    private Map<String, PermissionRequest> permissionRequests = new HashMap<>();
 
     /* (non-Javadoc)
      * @see android.support.v7.app.ActionBarActivity#onCreate(android.os.Bundle)
@@ -86,11 +99,12 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // For Android 6 / M / API 23 and later
-        this.requestAudioPermission();
+        mLayout = findViewById(R.id.example_main_layout);
+
+        this.requestAppPermissions();
 
         this.setupUI();
-        
+
         // Initialize WePay
         context = getApplicationContext();
 
@@ -109,7 +123,11 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.writeToConsole("accountId: " + String.format("%d", accountId));
 
         // Initialize and configure the wepay object with current settings
-        Config config = new Config(context, clientId, environment).setUseLocation(false).setUseTestEMVCards(true).setStopCardReaderAfterTransaction(false);
+        Config config = new Config(context, clientId, environment)
+                .setUseLocation(false)
+                .setUseTestEMVCards(true)
+                .setStopCardReaderAfterOperation(false)
+                .setLogLevel(LogLevel.ALL);
         this.wepay = new WePay(config);
     }
 
@@ -139,69 +157,15 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         tvConsole = (TextView) findViewById(R.id.consoleView);
         tvConsole.setMovementMethod(new ScrollingMovementMethod());
 
-        ((ImageButton) findViewById(R.id.buttonManual)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonInfo)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonTokenize)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonStopCardReader)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonCalibrate)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonBattery)).setOnClickListener(this);
-        ((ImageButton) findViewById(R.id.buttonSignature)).setOnClickListener(this);
-
-    }
-
-    /**
-     * AuthorizationHandler - onEMVApplicationSelectionRequested
-     */
-    @Override
-    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
-        int selectedIndex = 0;
-
-        this.writeToConsole("\nPerforming application selection:\n");
-        this.writeToConsole(applications.toString());
-        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
-
-        callback.useApplicationAtIndex(selectedIndex);
-    }
-
-    /**
-     * AuthorizationHandler - onAuthorizationSuccess
-     */
-    @Override
-    public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
-        this.writeToConsole("\nAuthorized amount: " + String.valueOf(authorizationInfo.getAuthorizedAmount()));
-        this.writeToConsole("Token id: " + authorizationInfo.getTokenId());
-        this.writeToConsole("Transaction Token: " + authorizationInfo.getTransactionToken());
-        this.setStatusText("Authorized!");
-    }
-
-    /**
-     * AuthorizationHandler - onAuthorizationError
-     */
-    @Override
-    public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
-        this.writeToConsole("\nAuthorization failed! error:");
-        this.writeToConsole(error.toString());
-        this.setStatusText("Authorization failed!");
-    }
-
-    /**
-     * CardReaderHandler - onSuccess
-     */
-    @Override
-    public void onSuccess(PaymentInfo paymentInfo) {
-        this.writeToConsole("\nSuccess! Info from card reader:");
-        this.writeToConsole(paymentInfo.toString());
-        this.setStatusText("Dip/Swipe succeeded");
-    }
-
-    /**
-     * CardReaderHandler - onError
-     */
-    @Override
-    public void onError(final Error error) {
-        this.writeToConsole("\nDip/Swipe failed! error:");
-        this.writeToConsole(error.toString());
-        this.setStatusText("Dip/Swipe failed");
+        findViewById(R.id.buttonManual).setOnClickListener(this);
+        findViewById(R.id.buttonInfo).setOnClickListener(this);
+        findViewById(R.id.buttonTokenize).setOnClickListener(this);
+        findViewById(R.id.buttonStopCardReader).setOnClickListener(this);
+        findViewById(R.id.buttonCalibrate).setOnClickListener(this);
+        findViewById(R.id.buttonBattery).setOnClickListener(this);
+        findViewById(R.id.buttonSignature).setOnClickListener(this);
+        findViewById(R.id.buttonGetRememberedCardReader).setOnClickListener(this);
+        findViewById(R.id.buttonForgetRememberedCardReader).setOnClickListener(this);
     }
 
     /**
@@ -235,6 +199,38 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     /**
+     * CardReaderHandler - onCardReaderSelection
+     */
+    @Override
+    public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> devices) {
+        LayoutInflater inflater = this.getLayoutInflater();
+        View view = inflater.inflate(R.layout.fragment_available_readers, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(view);
+        builder.setTitle("Discovered devices:");
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                callback.useCardReaderAtIndex(-1);
+            }
+        });
+        list = (ListView) view.findViewById(R.id.available_readers_list);
+        listAdapter = new ArrayAdapter<>(this, R.layout.device_name);
+        list.setAdapter(listAdapter);
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                callback.useCardReaderAtIndex(position);
+                deviceSelectionDialog.dismiss();
+
+            }
+        });
+        listAdapter.addAll(devices);
+        deviceSelectionDialog = builder.create();
+        deviceSelectionDialog.show();
+    }
+
+    /**
      * CardReaderHandler - onReaderResetRequested
      */
     @Override
@@ -253,12 +249,48 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     /**
+     * CardReaderHandler - onEMVApplicationSelectionRequested
+     */
+    @Override
+    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
+        int selectedIndex = 0;
+
+        this.writeToConsole("\nPerforming application selection:\n");
+        this.writeToConsole(applications.toString());
+        this.writeToConsole("\nselected Index: " + selectedIndex + " (" + applications.get(selectedIndex) + ")");
+
+        callback.useApplicationAtIndex(selectedIndex);
+    }
+
+    /**
      * CardReaderHandler - onPayerEmailRequested
      */
     @Override
     public void onPayerEmailRequested(CardReaderEmailCallback callback) {
         callback.insertPayerEmail("android-example@wepay.com");
     }
+
+    /**
+     * CardReaderHandler - onSuccess
+     */
+    @Override
+    public void onSuccess(PaymentInfo paymentInfo) {
+        this.writeToConsole("\nSuccess! Info from card reader:");
+        this.writeToConsole(paymentInfo.toString());
+        this.setStatusText("Dip/Swipe succeeded");
+    }
+
+    /**
+     * CardReaderHandler - onError
+     */
+    @Override
+    public void onError(final Error error) {
+        this.writeToConsole("\nDip/Swipe failed! error:");
+        this.writeToConsole(error.toString());
+        this.setStatusText("Dip/Swipe failed");
+    }
+
+
 
     /**
      * TokenizationHandler - onSuccess
@@ -282,13 +314,36 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
         this.setStatusText("Tokenization failed");
     }
 
+
+    /**
+     * AuthorizationHandler - onAuthorizationSuccess
+     */
+    @Override
+    public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
+        this.writeToConsole("\nAuthorized amount: " + String.valueOf(authorizationInfo.getAuthorizedAmount()));
+        this.writeToConsole("Token id: " + authorizationInfo.getTokenId());
+        this.writeToConsole("Transaction Token: " + authorizationInfo.getTransactionToken());
+        this.setStatusText("Authorized!");
+    }
+
+    /**
+     * AuthorizationHandler - onAuthorizationError
+     */
+    @Override
+    public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
+        this.writeToConsole("\nAuthorization failed! error:");
+        this.writeToConsole(error.toString());
+        this.setStatusText("Authorization failed!");
+    }
+
+
     /**
      * CheckoutHandler - onError
      */
     @Override
     public void onError(Bitmap image, String checkoutId, Error error) {
         this.writeToConsole("\nSignature failed! error:");
-        this.writeToConsole(error.toString());
+        this.writeToConsole(error.getErrorDescription());
         this.setStatusText("Signature failed");
     }
 
@@ -360,11 +415,13 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.writeToConsole("Initializing Card Reader for Tokenizing");
             this.setStatusText("Initializing Card Reader");
             this.wepay.startTransactionForTokenizing(this, this, this);
+            this.cardReaderStarted = true;
         } else if (btn.getId() == R.id.buttonInfo) {
             this.resetConsole();
             this.writeToConsole("Initializing Card Reader for Info");
             this.setStatusText("Initializing Card Reader");
             this.wepay.startTransactionForReading(this);
+            this.cardReaderStarted = true;
         } else if (btn.getId() == R.id.buttonManual) {
             this.resetConsole();
 
@@ -377,7 +434,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             PaymentInfo paymentInfo = new PaymentInfo("Android", "Tester", "a@b.com",
                     "Visa xxxx-1234", address,
                     address, PaymentMethod.MANUAL,
-                    "4242424242424242", "123", "01", "18", true);
+                    "4242424242424242", "123", "01", "25", true);
 
             this.setStatusText("Testing Manual");
 
@@ -404,7 +461,7 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.writeToConsole("Stop Card Reader selected");
 
             // Change status label
-            this.setStatusText("Stopping Card Reader...");
+            this.setStatusText(this.cardReaderStarted ? "Stopping Card Reader..." : "Card reader not started");
 
             // Make WePay API call
             this.wepay.stopCardReader();
@@ -427,7 +484,23 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
             this.setStatusText("Getting Battery Level...");
 
             // Make WePay API call
-            this.wepay.getCardReaderBatteryLevel(this);
+            this.wepay.getCardReaderBatteryLevel(this, this);
+            this.cardReaderStarted = true;
+        } else if (btn.getId() == R.id.buttonGetRememberedCardReader) {
+            String cardReader = wepay.getRememberedCardReader();
+            String rememberedCardReaderMessage = "No remembered card reader exists";
+
+            this.setStatusText("Getting remembered card reader");
+
+            if (cardReader != null) {
+                rememberedCardReaderMessage = "Remembered card reader is " + cardReader;
+            }
+
+            this.writeToConsole(rememberedCardReaderMessage);
+        } else if (btn.getId() == R.id.buttonForgetRememberedCardReader) {
+            this.setStatusText("Forgetting remembered card reader");
+            this.wepay.forgetRememberedCardReader();
+            this.writeToConsole("Forgot the remembered card reader");
         }
     }
 
@@ -454,48 +527,108 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     }
 
     ////////////////////////////////
-    // Android M - Audio permissions
+    // Android M - Permissions
     ////////////////////////////////
 
-    private void requestAudioPermission() {
+    private void requestAppPermissions() {
+        PermissionRequest audioPermissionRequest, coarseLocationPermissionRequest;
 
-        mLayout = findViewById(R.id.example_main_layout);
+        audioPermissionRequest = new PermissionRequest(Manifest.permission.RECORD_AUDIO, "record audio");
+        coarseLocationPermissionRequest = new PermissionRequest(Manifest.permission.ACCESS_COARSE_LOCATION, "coarse location");
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
+        this.addPendingPermission(audioPermissionRequest);
+        this.addPendingPermission(coarseLocationPermissionRequest);
 
-            Log.i(TAG, "Audio permission has NOT been granted. Requesting permission.");
+        // For Android 6 / M / API 23 and later
+        this.requestPendingPermissions(this.permissionRequests, REQUEST_PERMISSION);
+    }
 
-            // BEGIN_INCLUDE(audio_permission_request)
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.RECORD_AUDIO)) {
-                // Provide an additional rationale to the user if the permission was not granted
-                // and the user would benefit from additional context for the use of the permission.
-                // For example if the user has previously denied the permission.
-                Log.i(TAG,
-                        "Displaying audio permission rationale to provide additional context.");
-                Snackbar.make(mLayout, "Permission to record audio is required for using the card reader.",
-                        Snackbar.LENGTH_INDEFINITE)
-                        .setAction("OK", new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                ActivityCompat.requestPermissions(MainActivity.this,
-                                        new String[]{Manifest.permission.RECORD_AUDIO},
-                                        REQUEST_AUDIO);
-                            }
-                        })
-                        .show();
-            } else {
+    /**
+     * Adds a request permission to the permissionRequests map if the app does not yet have
+     * permissions.
+     * */
+    private void addPendingPermission(PermissionRequest permission) {
+        int permissionLevel = ActivityCompat.checkSelfPermission(this, permission.androidPermissionType);
 
-                // Audio permission has not been granted yet. Request it directly.
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
-                        REQUEST_AUDIO);
-            }
-            // END_INCLUDE(audio_permission_request)
+        if (permissionLevel != PackageManager.PERMISSION_GRANTED) {
+            this.permissionRequests.put(permission.androidPermissionType, permission);
         } else {
-            // Do nothing, we have audio permissions already
-            Log.i(TAG, "Audio permission has previously been granted.");
+            // Do nothing, we have permissions already
+            Log.i(TAG, permission.shortPermissionType + " has previously been granted.");
         }
+    }
+
+    private void requestPendingPermissions(Map<String, PermissionRequest> permissions, final int requestType) {
+        if (permissions.size() > 0) {
+            final String[] androidPermissions = new String[permissions.size()];
+            int index = 0;
+            String shortPermissions = "";
+
+            for (PermissionRequest permission : permissions.values()) {
+                androidPermissions[index] = permission.androidPermissionType;
+                index++;
+
+                shortPermissions += permission.shortPermissionType;
+
+                if (index < permissions.size()) {
+                    shortPermissions += ", ";
+                }
+            }
+
+            Log.i(TAG, "Displaying permission rationale to provide additional context.");
+
+            Snackbar.make(mLayout, shortPermissions + " is required for using the card reader.",
+                Snackbar.LENGTH_INDEFINITE)
+                .setAction("OK", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                androidPermissions, requestType);
+                    }
+                })
+                .show();
+        }
+    }
+
+    private void handleRequestPermissionsResponse(int grantResult, String permissionType) {
+        // BEGIN_INCLUDE(permission_result)
+        // Received permission result for permission.
+        Log.i(TAG, "Received response for " + permissionType + " permission request.");
+
+        PermissionRequest permissionRequest = this.permissionRequests.get(permissionType);
+        String shortPermissionType = permissionType;
+
+        if (permissionRequest != null) {
+            shortPermissionType = permissionRequest.shortPermissionType;
+        }
+
+        // Check if the only required permission has been granted
+        if (grantResult == PackageManager.PERMISSION_GRANTED) {
+            // Permission has been granted, preview can be displayed
+            Log.i(TAG, permissionType + " permission has now been granted. Showing preview.");
+            Snackbar.make(mLayout, shortPermissionType + " permission available",
+                    Snackbar.LENGTH_SHORT).show();
+
+            // Remove the granted permission from our permission requests.
+            this.permissionRequests.remove(permissionType);
+        } else {
+            Log.i(TAG, permissionType + " permission was NOT granted.");
+
+            if (permissionRequest.isFirstAskForPermission) {
+                permissionRequest.isFirstAskForPermission = false;
+            } else {
+                Snackbar.make(mLayout, shortPermissionType + " permission not granted, card reader will not work",
+                        Snackbar.LENGTH_SHORT).show();
+
+                // The user refuses to grant this permission, so remove it from the list.
+                this.permissionRequests.remove(permissionType);
+            }
+        }
+        // END_INCLUDE(permission_result)
+    }
+
+    private boolean isRequestCodeHandled(int requestCode) {
+        return requestCode == REQUEST_PERMISSION;
     }
 
     /**
@@ -504,33 +637,27 @@ public class MainActivity extends ActionBarActivity implements CardReaderHandler
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-
-        if (requestCode == REQUEST_AUDIO) {
-            // BEGIN_INCLUDE(permission_result)
-            // Received permission result for audio permission.
-            Log.i(TAG, "Received response for Audio permission request.");
-
-            // Check if the only required permission has been granted
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Audio permission has been granted, preview can be displayed
-                Log.i(TAG, "Audio permission has now been granted. Showing preview.");
-                Snackbar.make(mLayout, "audio permission available",
-                        Snackbar.LENGTH_SHORT).show();
-            } else {
-                Log.i(TAG, "Audio permission was NOT granted.");
-
-                if (this.isFirstAskForAudioPermission) {
-                    this.isFirstAskForAudioPermission = false;
-                    this.requestAudioPermission();
-                } else {
-                    Snackbar.make(mLayout, "audio permission not granted, card reader will not work",
-                            Snackbar.LENGTH_SHORT).show();
-                }
+        if (isRequestCodeHandled(requestCode)) {
+            for (int i = 0; i < permissions.length; ++i) {
+                handleRequestPermissionsResponse(grantResults[i], permissions[i]);
             }
-            // END_INCLUDE(permission_result)
 
+            this.requestPendingPermissions(this.permissionRequests, requestCode);
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    private class PermissionRequest {
+        String androidPermissionType;
+        String shortPermissionType;
+        Boolean isFirstAskForPermission;
+
+        PermissionRequest(String androidPermissionType,
+                          String shortPermissionType) {
+            this.androidPermissionType = androidPermissionType;
+            this.shortPermissionType = shortPermissionType;
+            this.isFirstAskForPermission = true;
         }
     }
 }

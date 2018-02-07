@@ -1,3 +1,24 @@
+2018-02-06
+* Released version 3.0.0
+* Fixed Volley settings causing card authorization requests to be retried
+* Replace AsyncHttpClient with Volley
+* Added new error code CARD_READER_UNABLE_TO_CONNECT
+* Added Config.logLevel
+* Added LogLevel enum
+* Moved onEMVApplicationSelectionRequested from AuthorizationHandler to CardReaderHandler
+* Added CardReaderHandler.onCardReaderSelection that's called when the SDK finds card readers
+* Added a SEARCHING_FOR_READER status issued from CardReaderHandler.onStatusChange that indicates the SDK is searching for card readers
+* Added a CardReaderHandler parameter to WePay.getCardReaderBatteryLevel so the SDK can call back with the appropriate statuses
+* Added WePay.getRememberedCardReader to retrieve the name of the most recently connected card reader
+* Added WePay.forgetRememberedCardReader to tell the SDK to forget the most recently connected card reader name
+* Renamed Config.stopCardReaderAfterTransaction to Config.stopCardReaderAfterOperation
+* Added MockConfig.mockCardReaderIsDetected
+* Added new error codes INVALID_CARD_READER_SELECTION and CARD_READER_BATTERY_TOO_LOW
+* The most recently connected card reader is now remembered and used when discovered.
+* Added support for Moby3000 Bluetooth card reader
+* Updated permissions for the example app to support searching for and interfacing with the new card reader
+* Fixed logic that caused hanging in certain cases during startTransactionForReading()
+
 2016-11-16
 * Released version 2.0.0
 * CardReaderTransactionInfoCallback.useTransactionInfo() and AuthorizationInfo.getAuthorizedAmount() now use BigDecimal instead of double for amount

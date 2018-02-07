@@ -22,12 +22,15 @@ import java.util.List;
 import java.util.Map;
 
 public class MockRoamTransactionManager implements TransactionManager{
+    public ErrorCode mockCommandErrorCode = ErrorCode.UnknownError;
+
     private MockConfig mockConfig;
     private PaymentMethod paymentMethodToMock;
     private DeviceStatusHandler deviceStatusHandler;
     private static Handler mainThreadHandler = new Handler(Looper.getMainLooper());
     private boolean EMVAppAlreadySelected = false;
     private int selectedAppIndex = -1;
+    private boolean isCommandCancelled = false;
 
     // AID's supported by card reader
     private String AID_MCRD = "A000000004";
@@ -77,6 +80,7 @@ public class MockRoamTransactionManager implements TransactionManager{
         transactionCurrencyCode = null;
         amountAuthorized = null;
         terminalCountryCode = null;
+        mockCommandErrorCode = ErrorCode.UnknownError;
         return this;
     }
 
@@ -88,6 +92,8 @@ public class MockRoamTransactionManager implements TransactionManager{
     @Override
     public void sendCommand(Map<Parameter, Object> map, DeviceResponseHandler deviceResponseHandler) {
         Command commandToExecute = (Command) map.get(Parameter.Command);
+        isCommandCancelled = false;
+
         if (mockConfig != null) {
             paymentMethodToMock = mockConfig.getMockPaymentMethod();
         } else {
@@ -106,10 +112,13 @@ public class MockRoamTransactionManager implements TransactionManager{
                     public void run() {
                         responseHandler.onProgress(ProgressMessage.CommandSent, null);
                         responseHandler.onProgress(ProgressMessage.PleaseInsertCard, null);
-                        if (paymentMethodToMock.equals(PaymentMethod.DIP)) {
-                            responseHandler.onProgress(ProgressMessage.CardInserted, null);
-                        } else {
-                            responseHandler.onProgress(ProgressMessage.SwipeDetected, null);
+
+                        if (!isCommandCancelled) {
+                            if (paymentMethodToMock.equals(PaymentMethod.DIP)) {
+                                responseHandler.onProgress(ProgressMessage.CardInserted, null);
+                            } else {
+                                responseHandler.onProgress(ProgressMessage.SwipeDetected, null);
+                            }
                         }
                     }
                 });
@@ -122,7 +131,7 @@ public class MockRoamTransactionManager implements TransactionManager{
 
                 if (mockConfig.isCardReadFailure()) {
                     res.put(Parameter.ResponseCode, ResponseCode.Error);
-                    res.put(Parameter.ErrorCode, ErrorCode.UnknownError);
+                    res.put(Parameter.ErrorCode, this.mockCommandErrorCode);
 
                     break;
                 }
@@ -215,9 +224,20 @@ public class MockRoamTransactionManager implements TransactionManager{
         runOnMainThread(new Runnable() {
             @Override
             public void run() {
-                responseHandler.onResponse(res);
+                if (!isCommandCancelled) {
+                    responseHandler.onResponse(res);
+                }
             }
         });
+    }
+
+    @Override
+    public void cancelLastCommand() {
+        this.isCommandCancelled = true;
+
+        if (mainThreadHandler != null) {
+            mainThreadHandler.removeCallbacksAndMessages(null);
+        }
     }
 
     @Override
@@ -231,7 +251,7 @@ public class MockRoamTransactionManager implements TransactionManager{
     }
 
     @Override
-    public void cancelLastCommand() {
+    public void waitForCardRemoval(Integer cardRemovalTimeout, DeviceResponseHandler handler) {
 
     }
 

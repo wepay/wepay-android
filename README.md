@@ -15,7 +15,7 @@ There are two types of payment methods:
 + Merchant payment methods - to be used in apps where merchants collect payments from their customers
  
 The WePay Android SDK supports the following payment methods:
- - EMV Card Reader: Using an EMV Card Reader, a merchant can accept in-person payments by prosessing a consumer's EMV-enabled chip card. Traditional magnetic strip cards can be processed as well.
+ - Card Reader: Using an EMV Card Reader, a merchant can accept in-person payments by prosessing a consumer's EMV-enabled chip card. Traditional magnetic stripe cards can be processed as well.
  - Manual Entry (Consumer/Merchant): The Manual Entry payment method lets consumer and merchant apps accept payments by allowing the user to manually enter card info.
 
 ## Installation
@@ -60,9 +60,13 @@ compile 'com.google.code.gson:gson:2.2.2'
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 ~~~
 
 + Android 6 / M / API 23 and later require a more complicated mechanism of requesting audio permissions from the user. See the WePayExample app's MainActivity.java for a sample implementation.
++ Android 6 also requires COARSE_LOCATION permission in order to scan for Bluetooth devices. This is most likely a bug in Android. You can view a discussion of the topic [here] (https://code.google.com/p/android/issues/detail?id=189090&q=ble%20android%206.0&colspec=ID%20Type%20Status%20Owner%20Summary%20Stars).
 
 + Clean and build the project using your IDE or from the command line by going to the project's base directory and running:
 ~~~{.java}
@@ -70,7 +74,7 @@ compile 'com.google.code.gson:gson:2.2.2'
 ~~~
 + Done!
 
-Note: Card reader functionality is not available in this SDK by default. If you want to use this SDK with WePay card readers, send an email to mobile@wepay.com.
+Note: Card reader functionality is not available in this SDK by default. If you are interested in using the WePay Card Reader, please contact your sales representative or account manager.  If you have yet to be in direct contact with WePay, please email sales@wepay.com.
 
 ## Documentation
 HTML documentation is hosted on our [Github Pages Site](http://wepay.github.io/wepay-android/).
@@ -88,6 +92,8 @@ Detailed reference documentation is available on the reference page for the Wepa
 The SDK uses interfaces to repond to API calls. You will implement the relevant interfaces to receive responses to the API calls you make.
 Detailed reference documentation is available on the reference page for each interface:
 - com.wepay.android.AuthorizationHandler
+- com.wepay.android.BatteryLevelHandler
+- com.wepay.android.CalibrationHandler
 - com.wepay.android.CardReaderHandler
 - com.wepay.android.CheckoutHandler
 - com.wepay.android.TokenizationHandler
@@ -97,7 +103,7 @@ All other classes in the SDK are data models and Enums that are used to exchange
 Detailed reference documentation is available on the reference page for each class.
 
 ## Next Steps
-Head over to the com.wepay.android.WePay class reference to see all the API methods available.
+Head over to the [documentation](http://wepay.github.io/wepay-android/) to see all the API methods available.
 When you are ready, look at the samples below to learn how to interact with the SDK.
 
 
@@ -107,7 +113,7 @@ com.wepay.android.models.Error serves as documentation for all errors surfaced b
 
 ## Samples
 
-### See the WePayExample app for a working implementation of all API methods.
+### See the [WePayExample app](https://github.com/wepay/wepay-android/tree/master/WePayExample) for a working implementation of all API methods.
 
 ### Initializing the SDK
 
@@ -148,43 +154,12 @@ config.setUseLocation(true);
 
 ### Integrating the Card Reader payment methods (Swipe+Dip)
 
-+ Implement the AuthorizationHandler, CardReaderHandler and TokenizationHandler interfaces
++ Implement the CardReaderHandler, TokenizationHandler, and AuthorizationHandler interfaces
 ~~~{.java}
-public class MainActivity extends ActionBarActivity implements AuthorizationHandler, CardReaderHandler, TokenizationHandler
-~~~
-+ Implement the AuthorizationHandler interface methods
-~~~{.java}
-@Override
-public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
-    // Ask the payer to select an application from the list, 
-    // then execute the callback with the index of the selected application
-    callback.useApplicationAtIndex(0);
-}
-
-@Override
-public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
-    // Send the tokenId (authorizationInfo.getTokenId()) and transactionToken (authorizationInfo.getTransactionToken()) to your server
-    // Your server will use these values to make a /checkout/create call to complete the transaction
-}
-
-@Override
-public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
-    // handle the error
-}
+public class MainActivity extends ActionBarActivity implements CardReaderHandler, TokenizationHandler, AuthorizationHandler
 ~~~
 + Implement the CardReaderHandler interface methods
 ~~~{.java}
-@Override
-public void onSuccess(PaymentInfo paymentInfo) {
-    // use the payment info (for display/recordkeeping)
-    // wait for card tokenization response
-}
-
-@Override
-public void onError(Error error) {
-    // handle the error
-}
-
 @Override
 public void onStatusChange(CardReaderStatus status) {
     if (status.equals(CardReaderStatus.NOT_CONNECTED)) {
@@ -216,6 +191,14 @@ public void onStatusChange(CardReaderStatus status) {
 }
 
 @Override
+public void onCardReaderSelection(final CardReaderSelectionCallback callback, ArrayList<String> cardReaderNames) {
+    // In production apps, the merchant must choose the card reader they want to use.
+    // Here, we always select the first card reader in the array
+    int selectedIndex = 0;
+    callback.useCardReaderAtIndex(selectedIndex);
+}
+
+@Override
 public void onReaderResetRequested(CardReaderResetCallback callback) {
     // decide if you want to reset the reader, 
     // then execute the callback with the appropriate response
@@ -229,9 +212,27 @@ public void onTransactionInfoRequested(CardReaderTransactionInfoCallback callbac
 }
 
 @Override
+public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
+    // Ask the payer to select an application from the list, 
+    // then execute the callback with the index of the selected application
+    callback.useApplicationAtIndex(0);
+}
+
+@Override
 public void onPayerEmailRequested(CardReaderEmailCallback callback) {
     // provide the email address of the payer
     callback.insertPayerEmail("android-example@wepay.com");
+}
+
+@Override
+public void onSuccess(PaymentInfo paymentInfo) {
+    // use the payment info (for display/recordkeeping)
+    // wait for card tokenization response
+}
+
+@Override
+public void onError(Error error) {
+    // handle the error
 }
 ~~~
 + Implement the TokenizationHandler interface methods
@@ -248,35 +249,61 @@ public void onError(PaymentInfo paymentInfo, Error error) {
     // Handle error
 }
 ~~~
++ Implement the AuthorizationHandler interface methods
+~~~{.java}
+@Override
+public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
+    // Send the tokenId (authorizationInfo.getTokenId()) and transactionToken (authorizationInfo.getTransactionToken()) to your server
+    // Your server will use these values to make a /checkout/create call to complete the transaction
+}
+
+@Override
+public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
+    // handle the error
+}
+~~~
 + Make the WePay API call, passing in the instance(s) of the class(es) that implemented the interface methods
 ~~~{.java}
 this.wepay.startCardReaderForTokenizing(this, this, this);
 // Show UI asking the user to insert the card reader and wait for it to be ready
 ~~~
 + That's it! The following sequence of events will occur:
-    1. The user inserts the card reader (or it is already inserted)
-    2. The SDK tries to detect the card reader and initialize it.
-        - If the card reader is not detected, the `onStatusChange` method will be called with `status = NOT_CONNECTED`
-        - If the card reader is successfully detected, then the `onStatusChange` method will be called with `status = CONNECTED`.
-    3. Next, the SDK checks if the card reader is correctly configured (the `onStatusChange` method will be called with `status = CHECKING_READER`).
-        - If the card reader is already configured, the App is given a chance to force configuration. The SDK calls the `onReaderResetRequested` method, and the app must execute the callback method, telling the SDK whether or not the reader should be reset.
-        - If the reader was not configured, or the app requested a reset, the card reader is configured (the `onStatusChange` method will be called with `status = CONFIGURING_READER`)
-    4. Next, if the card reader is successfully initialized, the SDK asks the app for transaction information by calling the `onTransactionInfoRequested` method. The app must execute the callback method, telling the SDK what the amount, currency code and merchant account id is.
-    5. Next, the `onStatusChange` method will be called with `status = WAITING_FOR_CARD` 
-    6. If the user inserts a card successfully, the `onStatusChange:` method will be called with `status = CARD_DIPPED`
-    7. If the card has multiple applications on it, the payer must choose one:
+
+1. The user inserts the card reader (or it is already inserted), or powers on their bluetooth card reader.
+2. The SDK tries to detect the card reader and initialize it.
+    - The `onStatusChange` method will be called with `status = SEARCHING_FOR_READER`.
+    - If any card readers are discovered, the `onCardReaderSelection` method will be called with a list of discovered devices. If anything is plugged into the headphone jack, `"AUDIOJACK"` will be one of the devices discovered.
+    - If no card readers are detected, the `onStatusChange` method will be called with `status = NOT_CONNECTED`
+    - Once `callback.useCardReaderAtIndex()` is called, the SDK will attempt to to connect to the selected card reader.
+    - If the card reader is successfully connected, then the `onStatusChange` method will be called with `status = CONNECTED`.
+3. Next, the SDK checks if the card reader is correctly configured (the `onStatusChange` method will be called with `status = CHECKING_READER`).
+    - If the card reader is already configured, the app is given a chance to force configuration. The SDK calls the `onReaderResetRequested` method, and the app must execute the callback method, telling the SDK whether or not the reader should be reset.
+    - If the reader was not already configured, or the app requested a reset, the card reader is configured (the `onStatusChange` method will be called with `status = CONFIGURING_READER`)
+4. Next, if the card reader is successfully initialized, the SDK asks the app for transaction information by calling the `onTransactionInfoRequested` method. The app must execute the callback method, telling the SDK what the amount, currency code and merchant account id is.
+5. Next, the `onStatusChange` method will be called with `status = WAITING_FOR_CARD`
+6. If the user swipes a card successfully:
+    - The `onStatusChange` method will be called with `status = SWIPE_DETECTED`.
+    - The SDK asks the app for the payer’s email by calling the `onPayerEmailRequested` method. The app must execute the completion method and pass in the payer’s email address.
+    - The `onSuccess` method is called with the obtained payment info.
+    - The `onStatusChange` method will be called with `status = TOKENIZING`, and the SDK will automatically send the obtained card info to WePay's servers for tokenization.
+    - If tokenization succeeds, TokenizationHandler's `onSuccess` method will be called.
+    - If tokenization fails, TokenizationHandler's `onError` method will be called with the appropriate error, and processing will stop.
+7. Instead, if the user dips a card successfully:
+    - The `onStatusChange:` method will be called with `status = CARD_DIPPED`
+    - If the card has multiple applications on it, the payer must choose one:
         - The SDK calls the `onEMVApplicationSelectionRequested` method with a list of Applications on the card.
         - The app must display these Applications to the payer and allow them to choose which application they want to use.
         - Once the payer has decided, the app must inform the SDK of the choice by executing the calback method and passing in the index of the chosen application.
-    8. Next, the SDK extracts card data from the card.
-        - If the SDK is unable to obtain data from the card, the `onError` method will be called with the appropriate error, and processing will stop (the `onStatusChange` method will be called with `status = STOPPED`)
-        - Otherwise, the SDK attempts to ask the App for the payer’s email by calling the `onPayerEmailRequested` method
-    9. The app must execute the callback method and pass in the payer’s email address.
-    10. Next, the `onSuccess` method is called with the obtained payment info.
-    11. Next, the SDK will automatically send the obtained EMV card info to WePay's servers for authorization (the `onStatusChange` method will be called with `status = AUTHORIZING`)
-    12. If authorization fails, the `onAuthorizationError` method will be called and processing will stop.
-    13. If authorization succeeds, the `onAuthorizationSuccess` method will be called.
-    14. Done!
+    - Next, the SDK obtains card data from the chip on the card.
+    - The SDK asks the app for the payer’s email by calling the `onPayerEmailRequested` method. The app must execute the completion method and pass in the payer’s email address.
+    - The `onSuccess` method is called with the obtained payment info.
+    - The `onStatusChange` method will be called with `status = AUTHORIZING`, and the SDK will automatically send the obtained EMV card info to WePay's servers for authorization.
+    - If authorization succeeds, the `onAuthorizationSuccess` method will be called and processing will stop.
+    - If authorization fails, the `onAuthorizationError` method will be called.
+8. If a recoverable error occurs during swiping or dipping, one of the `onError` methods will be called. After a few seconds, the `onStatusChange` method will be called with `status = WAITING_FOR_CARD` and the card reader will again wait for the user to swipe/dip a card.
+9. If an unrecoverable error occurs, or if the SDK is unable to obtain data from the card, one of the `onError` methods will be called with the appropriate error.
+10. When processing stops, the `onStatusChange` method will be called with `status = kWPCardReaderStatusStopped`.
+10. Done!
 
 Note: After the card is inserted into the reader, it must not be removed until a successful auth response (or an error) is returned.
 
@@ -318,9 +345,9 @@ PaymentInfo paymentInfo = new PaymentInfo("Android", "Tester", "a@b.com",
 this.wepay.tokenize(paymentInfo, this);
 ~~~
 + That's it! The following sequence of events will occur:
-    1. The SDK will send the obtained payment info to WePay's servers for tokenization
-    2. If the tokenization succeeds, TokenizationHandler's `onSuccess` method will be called
-    3. Otherwise, if the tokenization fails, TokenizationHandler's `onError` method will be called with the appropriate error
+1. The SDK will send the obtained payment info to WePay's servers for tokenization
+2. If the tokenization succeeds, TokenizationHandler's `onSuccess` method will be called
+3. Otherwise, if the tokenization fails, TokenizationHandler's `onError` method will be called with the appropriate error
 
 ### Integrating the Store Signature API
 
@@ -354,9 +381,9 @@ Bitmap signature = BitmapFactory.decodeResource(getApplicationContext().getResou
 this.wepay.storeSignatureImage(signature, checkoutId, this);
 ~~~
 + That's it! The following sequence of events will occur:
-    1. The SDK will send the obtained signature to WePay's servers for tokenization
-    2. If the operation succeeds, CheckoutHandler's `onSuccess` method will be called
-    3. Otherwise, if the operation fails, CheckoutHandler's `onError` method will be called with the appropriate error
+1. The SDK will send the obtained signature to WePay's servers for tokenization
+2. If the operation succeeds, CheckoutHandler's `onSuccess` method will be called
+3. Otherwise, if the operation fails, CheckoutHandler's `onError` method will be called with the appropriate error
 
 ### Integrating the Calibration API
 
@@ -415,10 +442,14 @@ public void onBatteryLevelError(Error error) {
 this.wepay.getCardReaderBatteryLevel(this);
 ~~~
 + That's it! The following sequence of events will occur:
-    1. The SDK will attempt to read the battery level of the card reader
-    2. If the operation succeeds, BatteryLevelHandler's `onBatteryLevel` method will be called with the result
-    3. Otherwise, if the operation fails, BatteryLevelHandler's `onBatteryLevelError` method will be called with the appropriate error
-    4. The card reader must be plugged in before attempting to get battery level, otherwise the process will fail
+1. The SDK will attempt to read the battery level of the card reader
+2. If the operation succeeds, BatteryLevelHandler's `onBatteryLevel` method will be called with the result
+3. Otherwise, if the operation fails, BatteryLevelHandler's `onBatteryLevelError` method will be called with the appropriate error
+4. The card reader must be plugged in before attempting to get battery level, otherwise the process will fail
+
+### Configuring the SDK
+
+The experiences described above can be modified by utilizing the configuration options available on the Config object. Detailed descriptions for each configurable property is available in the documentation for Config.
 
 ### Test/develop using mock card reader and mock WepayClient
 
@@ -440,6 +471,7 @@ mockConfig.setMockPaymentMethod(PaymentMethod.SWIPE) // Payment method to mock; 
 .setEMVAuthFailure(true) // To mock a failure for EMV authorization; Defaults to false.
 .setMultipleEMVApplication(true) // To mock multiple EMV applications on card to choose from; Defaults to false.
 .setBatteryLevelError(true); // To mock an error while fetching battery level; Defaults to false.
+.setMockCardReaderDetected(false); // To mock a card reader being available for connection; Defaults to true.
 ~~~
 
 ### Integration tests and unit tests

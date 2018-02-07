@@ -4,10 +4,10 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.test.InstrumentationRegistry;
-import android.util.Log;
 
 import com.wepay.android.enums.CardReaderStatus;
 import com.wepay.android.enums.PaymentMethod;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.models.AuthorizationInfo;
 import com.wepay.android.models.Config;
 import com.wepay.android.models.Error;
@@ -53,15 +53,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, false, true);
+        this.restartTestHelper(7, statuses, config, false, true);
 
-        Assert.assertTrue(statuses.size() >= 5); // There will be more because in mock the error-restart loop does not stop
+        Assert.assertTrue(statuses.size() >= 6); // There will be more because in mock the error-restart loop does not stop
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(5));
     }
 
     @Test
@@ -72,15 +73,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, false, true);
+        this.restartTestHelper(7, statuses, config, false, true);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
     }
 
     @Test
@@ -91,15 +93,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, true, true);
+        this.restartTestHelper(7, statuses, config, true, true);
 
-        Assert.assertTrue(statuses.size() >= 5); // There will be more because in mock the success-restart loop does not stop
+        Assert.assertTrue(statuses.size() >= 6); // There will be more because in mock the success-restart loop does not stop
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(5));
     }
 
     @Test
@@ -110,15 +113,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, true, true);
+        this.restartTestHelper(7, statuses, config, true, true);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
     }
 
     @Test
@@ -129,15 +133,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, true, true);
+        this.restartTestHelper(7, statuses, config, true, true);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
     }
 
     @Test
@@ -148,87 +153,92 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, true, true);
+        this.restartTestHelper(7, statuses, config, true, true);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseDipSuccess_Reading() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseDipSuccess_Reading() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setMockPaymentMethod(PaymentMethod.DIP);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, true, true);
+        this.restartTestHelper(6, statuses, config, true, true);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseDipError_Reading() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseDipError_Reading() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setCardReadFailure(true).setMockPaymentMethod(PaymentMethod.DIP);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, false, true);
+        this.restartTestHelper(6, statuses, config, false, true);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseSwipeSuccess_Reading() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseSwipeSuccess_Reading() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setMockPaymentMethod(PaymentMethod.SWIPE);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, true, true);
+        this.restartTestHelper(6, statuses, config, true, true);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseSwipeError_Reading() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseSwipeError_Reading() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setCardReadFailure(true).setMockPaymentMethod(PaymentMethod.SWIPE);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, false, true);
+        this.restartTestHelper(6, statuses, config, false, true);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
     }
 
     /*
@@ -243,15 +253,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, false, false);
+        this.restartTestHelper(7, statuses, config, false, false);
 
-        Assert.assertTrue(statuses.size() >= 5); // There will be more because in mock the error-restart loop does not stop
+        Assert.assertTrue(statuses.size() >= 6); // There will be more because in mock the error-restart loop does not stop
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(5));
     }
 
     @Test
@@ -262,15 +273,16 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(6, statuses, config, false, false);
+        this.restartTestHelper(7, statuses, config, false, false);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
     }
 
     @Test
@@ -281,16 +293,17 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(8, statuses, config, true, false);
+        this.restartTestHelper(9, statuses, config, true, false);
 
-        Assert.assertTrue(statuses.size() >= 6); // There will be more because in mock the success-restart loop does not stop
+        Assert.assertTrue(statuses.size() >= 7); // There will be more because in mock the success-restart loop does not stop
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(4));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(6));
     }
 
     @Test
@@ -301,16 +314,17 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(8, statuses, config, true, false);
+        this.restartTestHelper(9, statuses, config, true, false);
 
-        Assert.assertEquals(6, statuses.size());
+        Assert.assertEquals(7, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(4));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(6));
     }
 
     @Test
@@ -321,16 +335,17 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(8, statuses, config, true, false);
+        this.restartTestHelper(9, statuses, config, true, false);
 
-        Assert.assertEquals(6, statuses.size());
+        Assert.assertEquals(7, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(4));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(6));
     }
 
     @Test
@@ -341,90 +356,95 @@ public class IntegrationTestConfig {
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(8, statuses, config, true, false);
+        this.restartTestHelper(9, statuses, config, true, false);
 
-        Assert.assertEquals(6, statuses.size());
+        Assert.assertEquals(7, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(4));
-        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(5));
+        Assert.assertEquals(CardReaderStatus.STOPPED, statuses.get(6));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseDipSuccess_Tokenizing() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseDipSuccess_Tokenizing() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setMockPaymentMethod(PaymentMethod.DIP);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(7, statuses, config, true, false);
+        this.restartTestHelper(8, statuses, config, true, false);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.AUTHORIZING, statuses.get(5));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseDipError_Tokenizing() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseDipError_Tokenizing() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setCardReadFailure(true).setMockPaymentMethod(PaymentMethod.DIP);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, false, false);
+        this.restartTestHelper(6, statuses, config, false, false);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.CARD_DIPPED, statuses.get(4));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseSwipeSuccess_Tokenizing() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseSwipeSuccess_Tokenizing() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setMockPaymentMethod(PaymentMethod.SWIPE);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(7, statuses, config, true, false);
+        this.restartTestHelper(8, statuses, config, true, false);
 
-        Assert.assertEquals(5, statuses.size());
+        Assert.assertEquals(6, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
-        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
+        Assert.assertEquals(CardReaderStatus.TOKENIZING, statuses.get(5));
     }
 
     @Test
-    public void testStopCardReaderAfterTransactionFalseSwipeError_Tokenizing() throws InterruptedException {
+    public void testStopCardReaderAfterOperationFalseSwipeError_Tokenizing() throws InterruptedException {
         Config config = getConfig();
-        config.setStopCardReaderAfterTransaction(false);
+        config.setStopCardReaderAfterOperation(false);
         config.getMockConfig().setCardReadFailure(true).setMockPaymentMethod(PaymentMethod.SWIPE);
 
         final List<CardReaderStatus> statuses = new ArrayList<>();
 
-        this.restartTestHelper(5, statuses, config, false, false);
+        this.restartTestHelper(6, statuses, config, false, false);
 
-        Assert.assertEquals(4, statuses.size());
+        Assert.assertEquals(5, statuses.size());
 
-        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(0));
-        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(1));
-        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(2));
-        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SEARCHING_FOR_READER, statuses.get(0));
+        Assert.assertEquals(CardReaderStatus.CONNECTED, statuses.get(1));
+        Assert.assertEquals(CardReaderStatus.CHECKING_READER, statuses.get(2));
+        Assert.assertEquals(CardReaderStatus.WAITING_FOR_CARD, statuses.get(3));
+        Assert.assertEquals(CardReaderStatus.SWIPE_DETECTED, statuses.get(4));
     }
 
     /**
@@ -439,19 +459,20 @@ public class IntegrationTestConfig {
     private void restartTestHelper(int latchCount, final List<CardReaderStatus>statuses, Config config, Boolean shouldSucceed, Boolean readOnly) throws InterruptedException {
         final WePay wePay = new WePay(config);
         final CountDownLatch countDownLatch = new CountDownLatch(latchCount);
+        List<CardReaderStatus> statusesCopy;
 
         final TestCardReaderHandler cardReaderHandler = new TestCardReaderHandler(countDownLatch) {
             @Override
             public void onSuccess(PaymentInfo paymentInfo) {
                 super.onSuccess(paymentInfo);
-                Log.d("restartTestHelper", paymentInfo.toString());
+                LogHelper.log(paymentInfo.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onError(com.wepay.android.models.Error error) {
                 super.onError(error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
 
@@ -459,7 +480,7 @@ public class IntegrationTestConfig {
             public void onStatusChange(CardReaderStatus status) {
                 super.onStatusChange(status);
                 statuses.add(status);
-                Log.d("restartTestHelper", status.toString());
+                LogHelper.log(status.toString());
                 countDownLatch.countDown();
             }
         };
@@ -468,14 +489,14 @@ public class IntegrationTestConfig {
             @Override
             public void onSuccess(PaymentInfo paymentInfo, PaymentToken token) {
                 super.onSuccess(paymentInfo, token);
-                Log.d("restartTestHelper", token.toString());
+                LogHelper.log(token.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onError(PaymentInfo paymentInfo, com.wepay.android.models.Error error) {
                 super.onError(paymentInfo, error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
         };
@@ -485,14 +506,14 @@ public class IntegrationTestConfig {
             @Override
             public void onAuthorizationSuccess(PaymentInfo paymentInfo, AuthorizationInfo authorizationInfo) {
                 super.onAuthorizationSuccess(paymentInfo, authorizationInfo);
-                Log.d("restartTestHelper", authorizationInfo.toString());
+                LogHelper.log(authorizationInfo.toString());
                 countDownLatch.countDown();
             }
 
             @Override
             public void onAuthorizationError(PaymentInfo paymentInfo, Error error) {
                 super.onAuthorizationError(paymentInfo, error);
-                Log.d("restartTestHelper", error.toString());
+                LogHelper.log(error.toString());
                 countDownLatch.countDown();
             }
         };
@@ -518,7 +539,9 @@ public class IntegrationTestConfig {
 
         countDownLatch.await(3000, TimeUnit.MILLISECONDS);
 
-        Log.d("restartTestHelper", "statuses: " + statuses.toString());
+        // Copy the status list to avoid printing the status list at the same time it's modified.
+        statusesCopy = new ArrayList<>(statuses);
+        LogHelper.log("statuses: " + statusesCopy.toString());
 
         if (shouldSucceed) {
             Assert.assertTrue(cardReaderHandler.onSuccessCalled);

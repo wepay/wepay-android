@@ -5,12 +5,14 @@ package com.wepay.android;
 
 import android.graphics.Bitmap;
 import android.location.Address;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.wepay.android.enums.PaymentMethod;
-import com.wepay.android.internal.CardReaderHelper;
+import com.wepay.android.internal.CardReaderDirector;
 import com.wepay.android.internal.CheckoutHelper;
+import com.wepay.android.internal.LogHelper;
 import com.wepay.android.internal.RiskHelper;
 import com.wepay.android.internal.WepayClient;
 import com.wepay.android.models.Config;
@@ -18,7 +20,6 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 import com.wepay.android.models.PaymentToken;
 
-import org.apache.http.Header;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -33,7 +34,7 @@ public class WePay {
     private Config config;
 
     /** The card reader helper. */
-    private CardReaderHelper cardReaderHelper;
+    private CardReaderDirector cardReaderDirector;
 
     /** The checkout helper. */
     private CheckoutHelper checkoutHelper;
@@ -45,6 +46,13 @@ public class WePay {
     private boolean isCardReaderAvailable = false;
 
     /**
+     * The handler that dispatches core SDK operations. Because all operations are queued on this
+     * handler's looper, they will be serially executed. This helps prevent nasty interrupts
+     * that can mess with the internal lifecycle.
+     */
+    private Handler operationHandler = null;
+
+    /**
      * Instantiates a new WePay instance.
      *
      * @param config the WePay config
@@ -53,11 +61,17 @@ public class WePay {
         this.config = config;
         this.checkoutHelper = new CheckoutHelper(config);
 
+        // Set the global log level based on the config value.
+        LogHelper.logLevel = config.getLogLevel();
+
+        // Spin up the async operation handler.
+        this.operationHandler = new Handler(Looper.getMainLooper());
+
         // check if card reader libraries are included
         try  {
-            Class.forName("com.wepay.android.internal.CardReaderHelper");
+            Class.forName("com.wepay.android.internal.CardReaderDirector");
             this.isCardReaderAvailable = true;
-            this.cardReaderHelper = new CardReaderHelper(config);
+            this.cardReaderDirector = new CardReaderDirector(config);
         } catch (final ClassNotFoundException e) {
             this.isCardReaderAvailable = false;
         } catch (final NoClassDefFoundError e) {
@@ -88,16 +102,21 @@ public class WePay {
      *
      * However, if a general error (errorCategory:ERROR_CATEGORY_CARD_READER, errorCode:CARD_READER_GENERAL_ERROR) occurs while reading, after a few seconds delay, the reader will automatically start waiting again for another 60 seconds. At that time, CardReaderHandler's onStatusChange() method will be called with status = WAITING_FOR_CARD, and the user can try to swipe/dip again. This behavior can be configured with com.wepay.android.models.Config.
      *
-     * WARNING: When this method is called, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use the reader.
+     * WARNING: When this method is called, if the "AUDIOJACK" device is selected via the onCardReaderSelection method in the CardReaderHandler interface, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use a reader.
      *
      * @param cardReaderHandler the card reader handler
      */
-    public void startTransactionForReading(CardReaderHandler cardReaderHandler) {
-        if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.startCardReaderForReading(cardReaderHandler);
-        } else {
-            Log.e("wepay_sdk", "card reader functionality is not available");
-        }
+    public void startTransactionForReading(final CardReaderHandler cardReaderHandler) {
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isCardReaderAvailable) {
+                    cardReaderDirector.startCardReaderForReading(cardReaderHandler);
+                } else {
+                    Log.e("wepay_sdk", "card reader functionality is not available");
+                }
+            }
+        });
     }
 
     /**
@@ -114,31 +133,41 @@ public class WePay {
      *
      * However, if a general error (errorCategory:ERROR_CATEGORY_CARD_READER, errorCode:CARD_READER_GENERAL_ERROR) occurs while reading, after a few seconds delay, the reader will automatically start waiting again for another 60 seconds. At that time, CardReaderHandler's onStatusChange() method will be called with status = WAITING_FOR_CARD, and the user can try to swipe/dip again. This behavior can be configured with com.wepay.android.models.Config.
      *
-     * WARNING: When this method is called, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use the reader.
+     * WARNING: When this method is called, if the "AUDIOJACK" device is selected via the onCardReaderSelection method in the CardReaderHandler interface, a (normally inaudible) signal is sent to the headphone jack of the phone, where the reader is expected to be connected. If headphones are connected instead of the reader, they may emit a very loud audible tone on receiving this signal. This method should only be called when the user intends to use a reader.
      *
      * @param cardReaderHandler the card reader handler
      * @param tokenizationHandler the tokenization handler
      * @param authorizationHandler the authorization handler
      */
-    public void startTransactionForTokenizing(CardReaderHandler cardReaderHandler, TokenizationHandler tokenizationHandler, AuthorizationHandler authorizationHandler) {
-        if (this.isCardReaderAvailable) {
-            String sessionId = (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
-            this.cardReaderHelper.startCardReaderForTokenizing(cardReaderHandler, tokenizationHandler, authorizationHandler, sessionId);
-        } else {
-            Log.e("wepay_sdk", "card reader functionality is not available");
-        }
+    public void startTransactionForTokenizing(final CardReaderHandler cardReaderHandler, final TokenizationHandler tokenizationHandler, final AuthorizationHandler authorizationHandler) {
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isCardReaderAvailable) {
+                    String sessionId = getSessionID();
+                    cardReaderDirector.startCardReaderForTokenizing(cardReaderHandler, tokenizationHandler, authorizationHandler, sessionId);
+                } else {
+                    Log.e("wepay_sdk", "card reader functionality is not available");
+                }
+            }
+        });
     }
 
     /**
-     * Stops the reader. In response, CardReaderHandler's onStatusChange() method will be called with status = STOPPED.
-     * Any tokenization in progress will not be stopped, and its result will be delivered to the TokenizationHandler.
+     * Stops the reader. In response, CardReaderHandler's onStatusChange() method will be called with status = STOPPED. The status can only be returned if you've provided a CardReaderHandler by starting a card reader operation after the WePay object was initialized.
+     * Any operation in progress may not stop, and its result will be delivered to the appropriate handler.
      */
     public void stopCardReader() {
-        if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.stopCardReader();
-        } else {
-            Log.e("wepay_sdk", "card reader functionality is not available");
-        }
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isCardReaderAvailable) {
+                    cardReaderDirector.stopCardReader();
+                } else {
+                    Log.e("wepay_sdk", "card reader functionality is not available");
+                }
+            }
+        });
     }
 
     /**
@@ -146,25 +175,35 @@ public class WePay {
      *
      * @param calibrationHandler the calibration handler
      */
-    public void calibrateCardReader(CalibrationHandler calibrationHandler) {
-        if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.calibrateCardReader(calibrationHandler);
-        } else {
-            Log.e("wepay_sdk", "card reader functionality is not available");
-        }
+    public void calibrateCardReader(final CalibrationHandler calibrationHandler) {
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isCardReaderAvailable) {
+                    cardReaderDirector.calibrateCardReader(calibrationHandler);
+                } else {
+                    Log.e("wepay_sdk", "card reader functionality is not available");
+                }
+            }
+        });
     }
-
     /**
-     * Use this method to get the current battery level of the card reader.
+     * Use this method to get the current battery level of the card reader. If no card reader is currently connected, this method will try to find and connect to one.
      *
+     * @param cardReaderHandler the card reader handler
      * @param batteryLevelHandler the battery level handler
      */
-    public void getCardReaderBatteryLevel(BatteryLevelHandler batteryLevelHandler) {
-        if (this.isCardReaderAvailable) {
-            this.cardReaderHelper.getCardReaderBatteryLevel(batteryLevelHandler);
-        } else {
-            Log.e("wepay_sdk", "card reader functionality is not available");
-        }
+    public void getCardReaderBatteryLevel(final CardReaderHandler cardReaderHandler, final BatteryLevelHandler batteryLevelHandler) {
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isCardReaderAvailable) {
+                    cardReaderDirector.getCardReaderBatteryLevel(cardReaderHandler, batteryLevelHandler);
+                } else {
+                    Log.e("wepay_sdk", "card reader functionality is not available");
+                }
+            }
+        });
     }
 
     /**
@@ -175,36 +214,41 @@ public class WePay {
      * @param tokenizationHandler the tokenization handler
      */
     public void tokenize(final PaymentInfo paymentInfo, final TokenizationHandler tokenizationHandler) {
-        String sessionId = (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
+        final String sessionId = getSessionID();
 
-        if (paymentInfo.getPaymentMethod() == PaymentMethod.MANUAL) {
-            Map<String, Object> paramMap = getManualParamMap(paymentInfo, sessionId);
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (paymentInfo.getPaymentMethod() == PaymentMethod.MANUAL) {
+                    Map<String, Object> paramMap = getManualParamMap(paymentInfo, sessionId);
 
-            WepayClient.creditCardCreate(this.config, paramMap, new JsonHttpResponseHandler() {
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                    WepayClient.creditCardCreate(config, paramMap, new WepayClient.ResponseHandler() {
+                        @Override
+                        public void onSuccess(int statusCode, JSONObject response) {
 
-                    String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
-                    PaymentToken token = new PaymentToken(tokenId);
+                            String tokenId = response.isNull("credit_card_id") ? null : response.optString("credit_card_id");
+                            PaymentToken token = new PaymentToken(tokenId);
 
-                    tokenizationHandler.onSuccess(paymentInfo, token);
+                            tokenizationHandler.onSuccess(paymentInfo, token);
+                        }
+
+                        @Override
+                        public void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse) {
+                            if (errorResponse != null) {
+                                final Error error = new Error(errorResponse, throwable);
+                                tokenizationHandler.onError(paymentInfo, error);
+                            } else {
+                                final Error error = Error.getNoDataReturnedError();
+                                tokenizationHandler.onError(paymentInfo, error);
+                            }
+                        }
+                    });
+                } else {
+                    final Error error = Error.getPaymentMethodCannotBeTokenizedError();
+                    tokenizationHandler.onError(paymentInfo, error);
                 }
-
-                @Override
-                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                    if (errorResponse != null) {
-                        final Error error = new Error(errorResponse, throwable);
-                        tokenizationHandler.onError(paymentInfo, error);
-                    } else {
-                        final Error error = Error.getNoDataReturnedError();
-                        tokenizationHandler.onError(paymentInfo, error);
-                    }
-                }
-            });
-        } else {
-            final Error error = Error.getPaymentMethodCannotBeTokenizedError();
-            tokenizationHandler.onError(paymentInfo, error);
-        }
+            }
+        });
     }
 
     /**
@@ -218,7 +262,37 @@ public class WePay {
      * @param checkoutHandler the signature handler
      */
     public void storeSignatureImage(final Bitmap image, final String checkoutId, final CheckoutHandler checkoutHandler) {
-        this.checkoutHelper.storeSignatureImage(image, checkoutId, checkoutHandler);
+        this.operationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                checkoutHelper.storeSignatureImage(image, checkoutId, checkoutHandler);
+            }
+        });
+    }
+
+    /**
+     * Use this method to get the name of the most recently used card reader.
+     *
+     * @return the name of the card reader.
+     */
+    public String getRememberedCardReader() {
+        if (isCardReaderAvailable) {
+            return cardReaderDirector.getRememberedCardReader(config.getContext());
+        } else {
+            Log.e("wepay_sdk", "card reader functionality is not available");
+            return null;
+        }
+    }
+
+    /**
+     * Use this method to clear the name of the most recently used card reader.
+     */
+    public void forgetRememberedCardReader() {
+        if (isCardReaderAvailable) {
+            cardReaderDirector.forgetRememberedCardReader(config.getContext());
+        } else {
+            Log.e("wepay_sdk", "card reader functionality is not available");
+        }
     }
 
     /** \internal
@@ -294,5 +368,9 @@ public class WePay {
         }
 
         return params;
+    }
+
+    private String getSessionID() {
+        return (this.riskHelper == null) ? null : this.riskHelper.getSessionId();
     }
 }

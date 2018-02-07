@@ -31,8 +31,11 @@ public class MockConfig {
     /** Determines if a battery info failure should be mocked. Defaults to false.*/
     private boolean batteryLevelError = false;
 
-    /** Determines if multiple EMV application should be mocked. Dafaults to false.*/
+    /** Determines if multiple EMV application should be mocked. Defaults to false.*/
     private boolean multipleEMVApplication = false;
+
+    /** Determines if the mock card reader is available for the purpose of establishing a connection. Defaults to true.*/
+    private boolean mockCardReaderDetected = true;
 
     /** Name of the device to mock. Defaults to Samsung SM-G900P.*/
     private String mockedDeviceName = "Samsung SM-G900P";
@@ -241,6 +244,27 @@ public class MockConfig {
      */
     public MockConfig setMultipleEMVApplication(boolean multipleEMVApplication) {
         this.multipleEMVApplication = multipleEMVApplication;
+        return this;
+    }
+
+    /**
+     * Determines if the mock card reader is available for the purpose of establishing a connection.
+     *
+     * @return the card reader isDetected config
+     */
+    public boolean isMockCardReaderDetected() {
+        return mockCardReaderDetected;
+    }
+
+    /**
+     * Sets the option for whether to mock a card reader that is available for the purpose of
+     * establishing a connection. If not explicitly set to false, defaults to true.
+     *
+     * @param isDetected the card reader isDetected config
+     * @return the MockConfig instance
+     */
+    public MockConfig setMockCardReaderDetected(boolean isDetected) {
+        this.mockCardReaderDetected = isDetected;
         return this;
     }
 

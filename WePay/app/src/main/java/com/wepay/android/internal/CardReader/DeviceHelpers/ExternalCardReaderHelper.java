@@ -1,6 +1,7 @@
 package com.wepay.android.internal.CardReader.DeviceHelpers;
 
 import com.wepay.android.AuthorizationHandler;
+import com.wepay.android.BatteryLevelHandler;
 import com.wepay.android.CardReaderHandler;
 import com.wepay.android.TokenizationHandler;
 import com.wepay.android.enums.CardReaderStatus;
@@ -19,6 +20,7 @@ public class ExternalCardReaderHelper {
     private AuthorizationHandler authorizationHandler;
     private CardReaderHandler cardReaderHandler;
     private TokenizationHandler tokenizationHandler;
+    private BatteryLevelHandler batteryLevelHandler;
 
     /**
      * Inform external card reader.
@@ -28,6 +30,12 @@ public class ExternalCardReaderHelper {
     public void informExternalCardReader(CardReaderStatus status) {
         if (this.cardReaderHandler != null) {
             this.cardReaderHandler.onStatusChange(status);
+        }
+    }
+
+    public void informExternalAuthorizationApplications(CardReaderHandler.ApplicationSelectionCallback callback, ArrayList<String> applications) {
+        if (this.cardReaderHandler != null) {
+            this.cardReaderHandler.onEMVApplicationSelectionRequested(callback, applications);
         }
     }
 
@@ -73,9 +81,9 @@ public class ExternalCardReaderHelper {
         }
     }
 
-    public void informExternalAuthorizationApplications(AuthorizationHandler.ApplicationSelectionCallback callback, ArrayList<String> applications) {
-        if (this.authorizationHandler != null) {
-            this.authorizationHandler.onEMVApplicationSelectionRequested(callback, applications);
+    public void informExternalCardReaderSelectionCallback(CardReaderHandler.CardReaderSelectionCallback callback, ArrayList<String> readers) {
+        if (this.cardReaderHandler != null) {
+            this.cardReaderHandler.onCardReaderSelection(callback, readers);
         }
     }
 
@@ -91,16 +99,20 @@ public class ExternalCardReaderHelper {
         }
     }
 
-    public AuthorizationHandler getAuthorizationHandler() {
-        return authorizationHandler;
+    public void informExternalBatteryLevelSuccess(int batteryLevel) {
+        if (this.batteryLevelHandler != null) {
+            this.batteryLevelHandler.onBatteryLevel(batteryLevel);
+        }
+    }
+
+    public void informExternalBatteryLevelError(Error error) {
+        if (this.batteryLevelHandler != null) {
+            this.batteryLevelHandler.onBatteryLevelError(error);
+        }
     }
 
     public void setAuthorizationHandler(AuthorizationHandler authorizationHandler) {
         this.authorizationHandler = authorizationHandler;
-    }
-
-    public CardReaderHandler getCardReaderHandler() {
-        return cardReaderHandler;
     }
 
     public void setCardReaderHandler(CardReaderHandler cardReaderHandler) {
@@ -113,5 +125,13 @@ public class ExternalCardReaderHelper {
 
     public void setTokenizationHandler(TokenizationHandler tokenizationHandler) {
         this.tokenizationHandler = tokenizationHandler;
+    }
+
+    public BatteryLevelHandler getBatteryLevelHandler() {
+        return batteryLevelHandler;
+    }
+
+    public void setBatteryLevelHandler(BatteryLevelHandler batteryLevelHandler) {
+        this.batteryLevelHandler = batteryLevelHandler;
     }
 }

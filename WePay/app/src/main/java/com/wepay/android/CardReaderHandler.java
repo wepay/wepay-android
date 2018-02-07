@@ -6,11 +6,23 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 
 /** \interface CardReaderHandler
  * The Interface CardReaderHandler defines the methods used to communicate information regarding the card reader.
  */
 public interface CardReaderHandler {
+
+    /**
+     * Called when the EMV card contains more than one application. The applications should be presented to the payer for selection. Once the payer makes a choice, the app must execute callback.useApplicationAtIndex() with the index of the selected application. The transaction cannot proceed until the callback is executed.
+     *
+     * Example:
+     *     callback.useApplicationAtIndex(0);
+     *
+     * @param callback the callback object.
+     * @param applications the array of String containing application names from the card.
+     */
+    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications);
 
     /**
      * Gets called when the card reader reads a card's information successfully.
@@ -51,6 +63,29 @@ public interface CardReaderHandler {
      * @param callback the callback object.
      */
     public void onPayerEmailRequested(CardReaderEmailCallback callback);
+
+    /**
+     * Gets called when card reader devices have been discovered, to give the app an opportunity to select which card reader to initialize. The app must respond by executing callback. The card reader will not be initialized until the callback is executed.
+     *
+     * @param callback the callback object.
+     * @param cardReaderNames the list of device names.
+     */
+    public void onCardReaderSelection(CardReaderSelectionCallback callback, ArrayList<String> cardReaderNames);
+
+    /** \interface ApplicationSelectionCallback
+     * The Interface ApplicationSelectionCallback defines the callback method used to provide information to the card reader during a Dip transaction.
+     */
+    public interface ApplicationSelectionCallback {
+        /**
+         * The callback function that must be executed by the app when onEMVApplicationSelectionRequested() is called by the SDK.
+         *
+         * Examples:
+         *     callback.useApplicationAtIndex(0);
+         *
+         * @param selectedIndex the index of the selected application in the array of applications from the card.
+         */
+        public void useApplicationAtIndex(int selectedIndex);
+    }
 
     /** \interface CardReaderResetCallback
      * The Interface CardReaderResetCallback defines the method used to provide information to the card reader before a transaction.
@@ -104,5 +139,20 @@ public interface CardReaderHandler {
          */
         public void insertPayerEmail(String email);
 
+    }
+
+    /** \interface CardReaderSelectionCallback
+     * The Interface CardReaderSelectionCallback defines the callback method used to select which card reader to initialize.
+     */
+    public interface CardReaderSelectionCallback {
+        /**
+         * The callback function that must be executed by the app when onCardReaderSelection() is called by the SDK.
+         *
+         * Examples:
+         *     callback.useCardReaderAtIndex(0);
+         *
+         * @param selectedIndex the index of the selected card reader in the array of detected card readers.
+         */
+        public void useCardReaderAtIndex(int selectedIndex);
     }
 }

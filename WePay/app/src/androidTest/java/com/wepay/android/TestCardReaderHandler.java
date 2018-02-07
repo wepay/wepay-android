@@ -6,6 +6,7 @@ import com.wepay.android.models.Error;
 import com.wepay.android.models.PaymentInfo;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 public class TestCardReaderHandler implements CardReaderHandler {
@@ -15,8 +16,11 @@ public class TestCardReaderHandler implements CardReaderHandler {
     public boolean onStoppedCalled = false;
     public boolean onConfiguringReaderStatusChangeCalled = false;
     public boolean onReaderResetRequestedCalled = false;
+    public boolean onCardReaderSelectionCalled = false;
+    public boolean onEMVApplicationSelectionRequestedCalled = false;
     public PaymentInfo paymentInfo;
     public Error error = null;
+    public CardReaderStatus mostRecentStatus = null;
     private CountDownLatch countDownLatch;
 
     public TestCardReaderHandler(CountDownLatch countDownLatch) {
@@ -37,6 +41,13 @@ public class TestCardReaderHandler implements CardReaderHandler {
 
     @Override
     public void onStatusChange(CardReaderStatus status) {
+        this.mostRecentStatus = status;
+    }
+
+    @Override
+    public void onEMVApplicationSelectionRequested(ApplicationSelectionCallback callback, ArrayList<String> applications) {
+        onEMVApplicationSelectionRequestedCalled = true;
+        callback.useApplicationAtIndex(applications.size() - 1);
     }
 
     @Override
@@ -54,5 +65,11 @@ public class TestCardReaderHandler implements CardReaderHandler {
     @Override
     public void onPayerEmailRequested(CardReaderEmailCallback callback) {
         callback.insertPayerEmail("a@b.com");
+    }
+
+    @Override
+    public void onCardReaderSelection(CardReaderSelectionCallback callback, ArrayList<String> devices) {
+        onCardReaderSelectionCalled = true;
+        callback.useCardReaderAtIndex(0);
     }
 }

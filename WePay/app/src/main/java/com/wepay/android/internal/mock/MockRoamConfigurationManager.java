@@ -189,7 +189,7 @@ public class MockRoamConfigurationManager implements ConfigurationManager{
 
     @Override
     public Boolean activateDevice(Device device) {
-        return null;
+        return true;
     }
 
     @Override
@@ -223,6 +223,7 @@ public class MockRoamConfigurationManager implements ConfigurationManager{
     }
 
     @Override
+    @Deprecated
     public void setUserInterfaceOptions(DeviceResponseHandler deviceResponseHandler) {
 
     }
@@ -254,11 +255,6 @@ public class MockRoamConfigurationManager implements ConfigurationManager{
 
     @Override
     public void setShutDownModeTime(Integer integer, DeviceResponseHandler deviceResponseHandler) {
-
-    }
-
-    @Override
-    public void setUserInterfaceOptions(Integer integer, LanguageCode languageCode, Boolean aBoolean, List<LanguageCode> list, Byte aByte, Byte aByte1, Byte aByte2, Byte aByte3, DeviceResponseHandler deviceResponseHandler) {
 
     }
 
@@ -298,12 +294,37 @@ public class MockRoamConfigurationManager implements ConfigurationManager{
     }
 
     @Override
-    public void configureContactlessTransactionOptions(Boolean aBoolean, Boolean aBoolean1, Boolean aBoolean2, Boolean aBoolean3, Boolean aBoolean4, Boolean aBoolean5, Boolean aBoolean6, Boolean aBoolean7, Boolean aBoolean8, DeviceResponseHandler deviceResponseHandler) {
+    public void configureContactlessTransactionOptions(Boolean isCVMSupported, Boolean isAMEXSupported, Boolean enableCryptogram17, Boolean enableOnlineCryptogram, Boolean enableOnline, Boolean enableMagStripe, Boolean enableMagChip, Boolean enableQVSDC, Boolean enableMSD, Boolean isDPASEmvSupported, Boolean isDPASMsrSupported, Integer contactlessOutcomeDisplayTime, DeviceResponseHandler deviceResponseHandler) {
 
     }
 
     @Override
-    public void configureContactlessTransactionOptions(Boolean aBoolean, Boolean aBoolean1, Boolean aBoolean2, Boolean aBoolean3, Boolean aBoolean4, Boolean aBoolean5, Boolean aBoolean6, Boolean aBoolean7, Boolean aBoolean8, Integer integer, DeviceResponseHandler deviceResponseHandler) {
+    public void configureContactlessTransactionOptions(Boolean isCVMSupported, Boolean isAMEXSupported, Boolean enableCryptogram17, Boolean enableOnlineCryptogram, Boolean enableOnline, Boolean enableMagStripe, Boolean enableMagChip, Boolean enableQVSDC, Boolean enableMSD, DeviceResponseHandler deviceResponseHandler) {
+
+    }
+
+    @Override
+    public void configureContactlessTransactionOptions(Boolean isCVMSupported, Boolean isAMEXSupported, Boolean enableCryptogram17, Boolean enableOnlineCryptogram, Boolean enableOnline, Boolean enableMagStripe, Boolean enableMagChip, Boolean enableQVSDC, Boolean enableMSD, Integer contactlessOutcomeDisplayTime, DeviceResponseHandler deviceResponseHandler) {
+
+    }
+
+    @Override
+    public void readCertificateFilesVersion(DeviceResponseHandler handler) {
+
+    }
+
+    @Override
+    public void readKeyMappingInfo(DeviceResponseHandler handler) {
+
+    }
+
+    @Override
+    public void enableRkiMode(DeviceResponseHandler handler) {
+
+    }
+
+    @Override
+    public void triggerRki(String deviceGroupName, DeviceResponseHandler handler) {
 
     }
 }

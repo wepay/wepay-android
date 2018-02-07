@@ -1,31 +1,36 @@
-/*
- * 
- */
 package com.wepay.android.internal;
 
-import com.google.gson.Gson;
-import com.loopj.android.http.AsyncHttpClient;
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.JsonHttpResponseHandler;
-import com.loopj.android.http.RequestParams;
-import com.wepay.android.models.MockConfig;
-import com.wepay.android.models.Config;
+import android.content.Context;
 
-import org.apache.http.entity.StringEntity;
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.wepay.android.models.Config;
+import com.wepay.android.models.Error;
+import com.wepay.android.models.MockConfig;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * The Class WepayClient.
  */
 public class WepayClient {
-
     /** The Constant BASE_URL_STAGE. */
     private static final String BASE_URL_STAGE = "https://stage.wepayapi.com/v2/";
-
+    
     /** The Constant BASE_URL_PROD. */
     private static final String BASE_URL_PROD = "https://wepayapi.com/v2/";
 
@@ -33,28 +38,13 @@ public class WepayClient {
     private static final String WEPAY_API_VERSION = "2016-03-30";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v2.0.0";
+    private static final String USER_AGENT = "WePay Android SDK v3.0.0";
 
-    /** The client. */
-    private static AsyncHttpClient client = new AsyncHttpClient();
+    /** The request queue */
+    private static RequestQueue requestQueue = null;
 
-    /**
-     * Gets the.
-     *
-     * @param config the config
-     * @param url the url
-     * @param params the params
-     * @param responseHandler the response handler
-     */
-    public static void get(Config config, String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {
-        client.setUserAgent(USER_AGENT);
-        client.addHeader("Api-Version", WEPAY_API_VERSION);
-
-        params.put("client_id", config.getClientId());
-        String abs = getAbsoluteUrl(config, url);
-
-        client.get(abs, params, responseHandler);
-    }
+    /** The client-side API call timeout duration in milliseconds */
+    private static final int REQUEST_TIMEOUT_MS = 40000;
 
     /**
      * Credit card tokenization, for card information form manual input.
@@ -63,7 +53,7 @@ public class WepayClient {
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void creditCardCreate(Config config, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    public static void creditCardCreate(Config config, Map<String, Object> params, ResponseHandler responseHandler) {
         post(config, "credit_card/create", params, responseHandler);
     }
 
@@ -74,7 +64,7 @@ public class WepayClient {
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void creditCardCreateSwipe(Config config, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    public static void creditCardCreateSwipe(Config config, Map<String, Object> params, ResponseHandler responseHandler) {
         post(config, "credit_card/create_swipe", params, responseHandler);
     }
 
@@ -85,7 +75,7 @@ public class WepayClient {
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void creditCardCreateEMV(Config config, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    public static void creditCardCreateEMV(Config config, Map<String, Object> params, ResponseHandler responseHandler) {
         post(config, "credit_card/create_emv", params, responseHandler);
     }
 
@@ -96,7 +86,7 @@ public class WepayClient {
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void creditCardAuthReverse(Config config, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    public static void creditCardAuthReverse(Config config, Map<String, Object> params, ResponseHandler responseHandler) {
         post(config, "credit_card/auth_reverse", params, responseHandler);
     }
 
@@ -107,20 +97,32 @@ public class WepayClient {
      * @param params the params
      * @param responseHandler the response handler
      */
-    public static void checkoutSignatureCreate(Config config, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    public static void checkoutSignatureCreate(Config config, Map<String, Object> params, ResponseHandler responseHandler) {
         post(config, "checkout/signature/create", params, responseHandler);
     }
 
 
     /**
-     * Post.
+     * Get the request.
      *
      * @param config the config
      * @param url the url
      * @param params the params
      * @param responseHandler the response handler
      */
-    private static void post(Config config, String url, Map<String, Object> params, AsyncHttpResponseHandler responseHandler) {
+    private static void get(Config config, String url, Map<String, Object> params, ResponseHandler responseHandler) {
+        makeRequest(url, Request.Method.GET, config, params, responseHandler);
+    }
+
+    /**
+     * Post the request.
+     *
+     * @param config the config
+     * @param url the url
+     * @param params the params
+     * @param responseHandler the response handler
+     */
+    private static void post(Config config, String url, Map<String, Object> params, final ResponseHandler responseHandler) {
 
         MockConfig mockConfig = config.getMockConfig();
         if (mockConfig != null && mockConfig.isUseMockWepayClient()) {
@@ -128,19 +130,19 @@ public class WepayClient {
             try {
                 if ("credit_card/create".equals(url)) {
                     if (mockConfig.isCardTokenizationFailure()) {
-                        ((JsonHttpResponseHandler) responseHandler).onFailure(500, null, null, response);
+                        responseHandler.onFailure(500, null, response);
                     } else {
                         response.put("credit_card_id", "1234567890");
                     }
                 } else if ("credit_card/create_swipe".equals(url)) {
                     if (mockConfig.isCardTokenizationFailure()) {
-                        ((JsonHttpResponseHandler) responseHandler).onFailure(500, null, null, response);
+                        responseHandler.onFailure(500, null, response);
                     } else {
                         response.put("credit_card_id", "1234567890");
                     }
                 } else if ("credit_card/create_emv".equals(url)) {
                     if (mockConfig.isEMVAuthFailure()) {
-                        ((JsonHttpResponseHandler) responseHandler).onFailure(500, null, null, response);
+                        responseHandler.onFailure(500, null, response);
                     }
                 } else if ("checkout/signature/create".equals(url)) {
                     response.put("signature_url", "<signature url>");
@@ -149,34 +151,116 @@ public class WepayClient {
                 e.printStackTrace();
             }
 
-
-            ((JsonHttpResponseHandler) responseHandler).onSuccess(200, null, response);
+            responseHandler.onSuccess(200, response);
         } else {
-            String contentType = "application/json";
-            client.setUserAgent(USER_AGENT);
-            client.addHeader("Api-Version", WEPAY_API_VERSION);
-
-            params.put("client_id", config.getClientId());
-            JSONObject jsonParams = null;
-            try {
-                jsonParams = new JSONObject(new Gson().toJson(params));
-            } catch (JSONException e) {
-                e.printStackTrace();
-                // Do nothing, the http library will throw an appropriate error
-            }
-
-            StringEntity entity = null;
-
-            String abs = getAbsoluteUrl(config, url);
-
-            try {
-                entity = new StringEntity(jsonParams.toString());
-            } catch (UnsupportedEncodingException e) {
-                // Do nothing, the http library will throw an appropriate error
-            }
-
-            client.post(config.getContext(), abs, entity, contentType, responseHandler);
+            makeRequest(url, Request.Method.POST, config, params, responseHandler);
         }
+    }
+
+    private static void makeRequest(String url, int method, Config config, Map<String, Object> params, final ResponseHandler responseHandler) {
+        String fullUrl = getAbsoluteUrl(config, url);
+        JSONObject requestBody = null;
+
+        if (requestQueue == null) {
+            init(config.getContext());
+        }
+
+        params.put("client_id", config.getClientId());
+
+        try {
+            requestBody = new JSONObject(new Gson().toJson(params));
+        } catch (JSONException e) {
+            LogHelper.log("Error: Unable to serialize request params to JSON. Params: " + params.toString() + ". Failure: " + e.getLocalizedMessage());
+        }
+
+        // Create the response listener.
+        Response.Listener<JSONObject> responseListener = new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                responseHandler.onSuccess(200, response);
+            }
+        };
+
+        // Create the error listener
+        Response.ErrorListener errorListener =  new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                JSONObject response = new JSONObject();
+                String errorResponse = "";
+
+                if (error.networkResponse != null) {
+                    try {
+                        errorResponse = new String(error.networkResponse.data, HttpHeaderParser.parseCharset(error.networkResponse.headers));
+                        response = new JSONObject(errorResponse);
+                    } catch (UnsupportedEncodingException e) {
+                        LogHelper.log("Error: Unable to convert error response to string. Failure: " + e.getLocalizedMessage());
+                    } catch (JSONException e) {
+                        LogHelper.log("Error: Unable to serialize response " + errorResponse + " into JSON. Failure: " + e.getLocalizedMessage());
+                    }
+
+                    responseHandler.onFailure(error.networkResponse.statusCode, error.getCause(), response);
+                } else {
+                    Integer errorCode = 500;
+                    String errorDescription = null;
+
+                    try {
+                        response.put("error_code", errorCode);
+                        response.put("error_domain", Error.ERROR_DOMAIN_API);
+                        response.put("error", Error.ERROR_CATEGORY_API);
+
+                        if (error.getCause() != null) {
+                            errorDescription = error.getCause().getLocalizedMessage();
+                            response.put("error_description", errorDescription);
+                        }
+                    } catch (JSONException e) {
+                        LogHelper.log("Error: unable to populate error response. Caught exception: " + e.getLocalizedMessage());
+                    }
+
+                    LogHelper.log("Received error response, but response contains no data.");
+                    LogHelper.log("Error response class: " + error.getClass().toString());
+
+                    if (errorDescription != null) {
+                        LogHelper.log("Error response description: " + errorDescription);
+                    }
+
+                    responseHandler.onFailure(errorCode, error.getCause(), response);
+                }
+            }
+        };
+
+        // Create a JSON Request with some of the methods overwritten.
+        JsonObjectRequest request = new JsonObjectRequest(method, fullUrl, requestBody, responseListener, errorListener) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+
+                headers.put("User-Agent", USER_AGENT);
+                headers.put("Api-Version", WEPAY_API_VERSION);
+
+                return headers;
+            }
+
+            @Override
+            protected Response<JSONObject> parseNetworkResponse(NetworkResponse response) {
+                try {
+                    String rawJSON = new String (response.data, HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
+                    JSONObject responseJSON = new JSONObject(rawJSON);
+                    responseJSON.put("headers", new JSONObject(response.headers));
+
+                    return Response.success(responseJSON, HttpHeaderParser.parseCacheHeaders(response));
+                } catch (UnsupportedEncodingException e) {
+                    LogHelper.log("Error: Unable to parse header data into string.");
+                } catch (JSONException e) {
+                    LogHelper.log("Error: Unable to serialize string into JSON object.");
+                }
+
+                return super.parseNetworkResponse(response);
+            }
+        };
+
+        request.setShouldCache(false);
+        request.setRetryPolicy(new DefaultRetryPolicy(REQUEST_TIMEOUT_MS, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        requestQueue.add(request);
     }
 
     /**
@@ -196,5 +280,14 @@ public class WepayClient {
         } else {
             return environment + relativeUrl;
         }
+    }
+
+    private static void init(Context context) {
+        requestQueue = Volley.newRequestQueue(context);
+    }
+
+    public interface ResponseHandler {
+        void onSuccess(int statusCode, JSONObject response);
+        void onFailure(int statusCode, Throwable throwable, JSONObject errorResponse);
     }
 }

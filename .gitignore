@@ -48,3 +48,6 @@ documentation/rtf/
 
 # Misc. OS Files
 .DS_Store
+
+# Arcanist
+.arcconfig
