@@ -322,33 +322,19 @@ public class WePay {
                 address.put("city", city);
             }
 
+            String postalCode = billingAddress.getPostalCode();
+            if (postalCode != null) {
+                address.put("postal_code", postalCode);
+            }
+
+            String region = billingAddress.getAdminArea();
+            if (region != null) {
+                address.put("region", region);
+            }
+
             String country = billingAddress.getCountryCode();
             if (country != null) {
                 address.put("country", country);
-            }
-
-            if (country != null && country.equalsIgnoreCase("US")) {
-                // For US addresses
-                String state = billingAddress.getAdminArea();
-                if (state != null) {
-                    address.put("state", state);
-                }
-
-                String zip = billingAddress.getPostalCode();
-                if (zip != null) {
-                    address.put("zip", zip);
-                }
-            } else {
-                // For non-US address
-                String state = billingAddress.getAdminArea();
-                if (state != null) {
-                    address.put("region", state);
-                }
-
-                String zip = billingAddress.getPostalCode();
-                if (zip != null) {
-                    address.put("postcode", zip);
-                }
             }
         }
 

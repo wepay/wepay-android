@@ -35,10 +35,10 @@ public class WepayClient {
     private static final String BASE_URL_PROD = "https://wepayapi.com/v2/";
 
     /** The Constant USER_AGENT. */
-    private static final String WEPAY_API_VERSION = "2016-03-30";
+    private static final String WEPAY_API_VERSION = "2017-05-31";
 
     /** The Constant USER_AGENT. */
-    private static final String USER_AGENT = "WePay Android SDK v3.0.0";
+    private static final String USER_AGENT = "WePay Android SDK v3.0.1";
 
     /** The request queue */
     private static RequestQueue requestQueue = null;
@@ -246,6 +246,8 @@ public class WepayClient {
                     String rawJSON = new String (response.data, HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
                     JSONObject responseJSON = new JSONObject(rawJSON);
                     responseJSON.put("headers", new JSONObject(response.headers));
+
+                    LogHelper.log(String.format("WePayClient response: %s", responseJSON.toString()));
 
                     return Response.success(responseJSON, HttpHeaderParser.parseCacheHeaders(response));
                 } catch (UnsupportedEncodingException e) {

@@ -726,11 +726,16 @@ public class DipTransactionHelper implements DeviceResponseHandler {
             // inform external success
             this.reportAuthorizationSuccess(this.createAuthInfo(MAGIC_TC), null, this.paymentInfo);
             this.reactToError(null);
-
         } else {
-            // complete the transaction
-            this.executeCommand(Command.EMVCompleteTransaction, this);
-            LogHelper.log("CMD: complete transaction");
+            if (this.authorizationError == null) {
+                // short circuit the cryptogram request to the card via the reader since we did not
+                // authorize the card and received no transaction cryptogram
+                this.reportAuthorizationSuccess(this.createAuthInfo(MAGIC_TC), null, this.paymentInfo);
+                this.reactToError(null);
+            } else {
+                this.reportAuthorizationSuccess(null, this.authorizationError, this.paymentInfo);
+                this.reactToError(this.authorizationError);
+            }
         }
     }
 
